@@ -12,12 +12,16 @@ The format is based on `Keep a Changelog`_.
 -------------
 - to be defined
 
-`23.01`_
+`23.02`_
 ----------------
 
 Added
 +++++
-- Work in progress.
+*  initial modifications from original code.
+*  added board label with current task timing.
+*  remove delete button from task.
+*  add several properties and icons to task.
+
 
 Laboratório de Automação de Sistemas Educacionais
 -------------------------------------------------
@@ -32,7 +36,7 @@ LABASE_ - NCE_ - UFRJ_
 .. _NCE: http://nce.ufrj.br
 .. _UFRJ: http://www.ufrj.br
 .. _Keep a Changelog: https://keepachangelog.com/en/1.0.0/
-.. _23.01: https://github.com/Aliteing/alite/releases
+.. _23.02: https://github.com/Aliteing/alite/releases
 
 .. |LABASE| image:: https://cetoli.gitlab.io/spyms/image/labase-logo-8.png
    :target: http://labase.activufrj.nce.ufrj.br
