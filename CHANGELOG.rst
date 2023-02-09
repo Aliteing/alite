@@ -1,4 +1,4 @@
-Platforma Genérica de Conteúdo
+Plataforma Genérica de Conteúdo
 ==============================
 Changelog
 =========
@@ -21,6 +21,7 @@ Added
 *  added board label with current task timing.
 *  remove delete button from task.
 *  add several properties and icons to task.
+*  Activ painter to persist kanban (fail).
 
 
 Laboratório de Automação de Sistemas Educacionais
