@@ -28,9 +28,9 @@ Changelog
         test connection with activ.
 
 """
-import mechanize
+# import mechanize
 # from BeautifulSoup import BeautifulSoup as soup
-import ssl
+# import ssl
 import json
 from urllib import request, parse
 DATA = """<html><body><pre>
@@ -41,7 +41,7 @@ DATA = """<html><body><pre>
   }
 }
 </pre></body></html>"""
-try:
+'''try:
     _create_unverified_https_context = ssl._create_unverified_context
 except AttributeError:
     # Legacy Python that doesn't verify HTTPS certificates by default
@@ -50,6 +50,7 @@ else:
     # Handle target environment that doesn't support HTTPS verification
     ssl._create_default_https_context = _create_unverified_https_context
 # ssl_version corrections are done
+'''
 
 
 class ActivPainter:
@@ -74,7 +75,7 @@ class ActivPainter:
         print(chtml)
 
     def write(self):
-        from browser import ajax
+        from browser import ajax, document
         page = "/rest/wiki/edit/labase/_Alite_kanban_LABASE"
         form = dict(
             action="",
@@ -88,16 +89,27 @@ class ActivPainter:
         # self.write(dict(status=0, result=form))
         print(self._data)
         data = parse.urlencode(form).encode()
+
+        def on_complete(_req):
+            if _req.status == 200 or req.status == 0:
+                # document["board"].html = _req.text
+                print("complete >>>> " + _req.text)
+            else:
+                # document["board"].html = "error " + _req.text
+                print("error >>>> " + _req.text)
+
         req = ajax.Ajax()
+        req.bind('complete', on_complete)
+
         # req.bind('complete', on_complete)
         # send a POST request to the url
         req.open('POST', page, True)
         req.set_header('content-type', 'application/x-www-form-urlencoded')
         # send data as a dictionary
-        resp = req.send(form)
+        resp = req.send(data)
         # req = request.Request(page, data=data)  # this will make the method "POST"
         # resp = request.urlopen(req)
-        print(resp)
+        print(""+resp)
 
 
 def scrap_from_page():

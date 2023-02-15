@@ -8,8 +8,8 @@
     <!-- fonts -->
     <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed" rel="stylesheet">
     <!--    <script src="https://kit.fontawesome.com/ee888cdf8b.js" crossorigin="anonymous"></script>-->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css"
-          integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w=="
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css"
+          integrity="sha512-SzlrxWUlpfuzQ+pcUCosxcglQRNAq/DZjVsC0lE40xsADsfeQoEypE+enwcOiGjk/bSuGGKHEyjSoQ1zVisanQ=="
           crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="shortcut icon" href="/image/favico.ico" type="image/x-icon"/>
     <script type="text/javascript" src="https://cdn.rawgit.com/brython-dev/brython/3.8.0/www/src/brython.js">
@@ -35,6 +35,7 @@
                 display : table-cell;
                 padding-bottom : 5em;
                 height : 100%;
+                /*opacity : 0.3*/
                 }
 
             .step_header {
@@ -109,6 +110,19 @@
                 border : 1px solid black;
                 background-color : rgba(255, 255, 255, 0.5)
                 }
+
+            .task_icon {
+                border-radius : 8px;
+                position : relative;
+                /*width : 100%;*/
+                height : 1.2em;
+                border : 1px solid black;
+                display : block;
+                text-align: center;
+                min-width: 1.1em;
+                font-size: 13px;
+                 padding: 1px;
+              }
 
             .task_progress_bar {
                 height : inherit;

@@ -30,6 +30,7 @@ Changelog
         added board label with current task timing.
         remove delete button from task.
         add several properties and icons to task.
+        change to pastel palette and introduce facets
 
 """
 # ----------------------------------------------------------
@@ -39,8 +40,9 @@ from browser import document as doc
 from browser import confirm, prompt, alert
 from browser.local_storage import storage
 import browser.html as html
-
+from collections import namedtuple
 # ----------------------------------------------------------
+IcoColor = namedtuple("IcoColor", "name icon color")
 SCHEMA_REVISION = "1.0"
 
 STEPS = [
@@ -51,11 +53,54 @@ STEPS_COLORS = [
     "#777777", "#888888", "#999999", "#AAAAAA", "#BBBBBB", "#CCCCCC", "#DDDDDD", "#EEEEEE", "#FFFFFFF"
 ]
 
-TASKS_COLORS = [
+_TASKS_COLORS = [
     "#EE0000", "#00CC00", "#0088EE", "#EEEE00", "#EEA500"
 ]
+TASKS_COLORS = "peachpuff rosybrown lightyellow greenyellow palegreen" \
+               " lightcyan aquamarine burlywood plum orchid".split()
+
+FACET_COLORS = FC = "darkred darkorange peach gold darkgreen navy" \
+               " indigo purple deeppink brown".split()
 
 TIME_FMT = "%Y/%m/%d %H:%M:%S"
+
+TAGS = dict(
+    use_levels=dict(
+        cloud="\u26C5 ivory", kite="\u1FA81 cyan", ship="\u1F6F3 blue", fish="\u1F41F navy", crab="\u1F980 slate"))
+DIAL = [f"dial-{pos if pos != '_' else ''}" for pos in "off min low med-low med _ high max".split()]
+_FACET = dict(
+    level=dict(
+        _self=f"gauge {FC[0]}",
+        cloud="cloud ivory", kite="dove cyan", ship="ship blue", fish="fish navy", crab="shrimp slate"),
+    phase=dict(
+        _self=f"timeline  {FC[1]}", inception="brain purple", elaboration="ruler cyan",
+        construction="hammer green", review="eye yellow", transition="truck-fast red"),
+    code=dict(
+        _self=f"code  {FC[2]}", spike="road-spikes purple", feature="box cyan", enhancement="ribbon green",
+        refactor="industry orange", bugfix="bug red"),
+    text=dict(
+        _self=f"book  {FC[3]}", document="pen purple", tutorial="graduation-cap cyan", manual="book-open green",
+        report="book-open-reader yellow", project="list-check red"),
+    nature=dict(
+        _self=f"book  {FC[4]}", development="building purple", data="database cyan", engineering="gears green",
+        research="book-atlas yellow", science="vial red"),
+    work=dict(
+        _self=f"person  {FC[5]}", planning="pen-ruler purple", activity="person-digging cyan",
+        meeting="people-group green", session="users yellow", exam="microscope red"),
+    scope=dict(
+        _self=f"stethoscope  {FC[6]}", step="shoe-prints purple", story="dragon cyan", epic="shield green",
+        milestone="bullseye yellow", release="truck red"),
+    cost=dict(
+        _self=f"wallet  {FC[7]}", farthing="piggy-bank purple", penny="coins cyan", shilling="sun green",
+        crown="crown yellow", pound="money-bill red"),
+    risk=dict(
+        _self=f"radiation  {FC[8]}", low="circle-radiation purple", moderate="biohazard cyan", medium="fire green",
+        high="bomb yellow", extreme="explosion red"),
+    value=dict(
+        _self=f"heart  {FC[9]}", common="spray-can-sparkles purple", magic="hand-sparkles cyan",
+        rare="star-half-stroke green", legendary="star yellow", mythical="wand-sparkles red"),
+)
+# FACET = {fk: {tk: IcoColor(*tv.split()) for tk, tv in fv.items()} for fk, fv in _FACET.items()}
 
 
 # ----------------------------------------------------------
@@ -218,6 +263,10 @@ class KanbanBoard:
         self.timeline.style.backgroundColor = "purple"
 
     def stop_task(self, *_):
+        from activ_painter import ActivPainter
+        ap = ActivPainter()
+        ap.read()
+        ap.write()
         self.timeline.style.backgroundColor = "lightgray"
         self.timeline.width = 1
 
@@ -232,6 +281,7 @@ class KanbanView:
         # doc['dump'].bind('click', self.dump)
 
     def draw(self):
+        doc.body.style.backgroundImage = "url(https://wallpaperaccess.com/full/36356.jpg)"
         step_ids = self.kanban.tasks["root"].task_ids
         width = 100 / len(step_ids)
         board = doc["board"]
@@ -244,7 +294,9 @@ class KanbanView:
     def draw_step(self, step, width, board):
         node = html.DIV(id=step.id, Class="step")
         node.style.width = percent(width)
-        node.style.backgroundColor = self.kanban.steps_colors[step.color_id]
+        # node.style.backgroundColor = self.kanban.steps_colors[step.color_id]
+        rgb = int(f"0x{self.kanban.steps_colors[step.color_id][-2:]}", 16)
+        node.style.backgroundColor = f"rgba({rgb},{rgb},{rgb},0.3)"
         _ = board <= node
 
         header = html.DIV(Class="step_header")
@@ -270,28 +322,45 @@ class KanbanView:
             self.draw_task(task, parent_node)
 
     def draw_task(self, task, parent_node):
+        from random import sample, randint
+
+        def do_tag(facet_, tag):
+            f_div = html.DIV(Class="task_icon", style={"background-color": facet_.color})
+            # f_ico = html.I(Class=f"fa fa-{facet_.icon}")
+            title = f"{facet_.name}:{tag.name}"
+            t_ico = html.I(Class=f"fa fa-{tag.icon}", style=dict(color=tag.color), title=title)
+            # _ = f_div <= f_ico
+            _ = f_div <= t_ico
+            return html.TD(f_div)
+
         node = html.DIV(Class="task", Id=task.id, draggable=True)
         node.style.backgroundColor = self.kanban.tasks_colors[task.color_id]
         _ = parent_node <= node
+        facet = {key: IcoColor(key, *(value["_self"].split()))for key, value in _FACET.items()}
+        facets = {fk: {tk: IcoColor(tk, *tv.split()) for tk, tv in fv.items() if tk != "_self"}
+                  for fk, fv in _FACET.items()}
+        cmd = [do_tag(facet[_facet], _tag) for _facet, _tags in sample(list(facets.items()), randint(1, 6))
+               for _tag in sample(list(_tags.values()), 1)]
 
         progress = html.DIV(Class="task_progress")
 
         progress_text = html.P("%d%%" % task.progress,
                                Class="task_progress_text")
-        _ = progress <= progress_text
+        # _ = progress <= progress_text
 
         progress_bar = html.DIV(Class="task_progress_bar")
         progress_bar.style.width = percent(task.progress)
-        _ = progress <= progress_bar
+        # _ = progress <= progress_bar XXX removed progress!
         icons = "bars external-link tags comment users calendar".split()
-        cmd = [html.TD(html.I(Class=f"fa fa-{ico}"), Class="task_command_delete") for ico in icons]
+        cmd += [html.TD(html.I(Class=f"fa fa-{ico}"), Class="task_command_delete") for ico in icons]
 
         menu = html.I(Class="fa fa-bars")
         command_delete = html.DIV(menu, Class="task_command_delete")
-        icons = html.TR(
-                html.TD(progress, Class="task_command") +
-                cmd[0] + cmd[1] + cmd[2] + cmd[3] + cmd[4] + cmd[5]
-            )
+        icons = html.TR()
+        # html.TD(progress, Class="task_command") +
+        #     cmd[0] + cmd[1] + cmd[2] + cmd[3] + cmd[4] + cmd[5] + cmd[7] + cmd[8] + cmd[2] + cmd[3] + cmd[4] + cmd[5]
+        # )
+        _ = [icons <= cm for cm in cmd]
         command = html.TABLE(icons, Class="task_command")
         #  +
 
