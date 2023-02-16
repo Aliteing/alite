@@ -29,18 +29,21 @@ Changelog
         initial modifications from original code.
         added board label with current task timing.
         remove delete button from task.
-        add several properties and icons to task.
-        change to pastel palette and introduce facets
+        add several properties and icons to task. @14
+        change to pastel palette and introduce facets @15
+        propose save with JSON, add svg icons @16
 
 """
 # ----------------------------------------------------------
 import time
 
 from browser import document as doc
-from browser import confirm, prompt, alert
+from browser import confirm, prompt, alert, svg, window
 from browser.local_storage import storage
 import browser.html as html
 from collections import namedtuple
+import json
+
 # ----------------------------------------------------------
 IcoColor = namedtuple("IcoColor", "name icon color")
 SCHEMA_REVISION = "1.0"
@@ -80,7 +83,7 @@ _FACET = dict(
         refactor="industry orange", bugfix="bug red"),
     text=dict(
         _self=f"book  {FC[3]}", document="pen purple", tutorial="graduation-cap cyan", manual="book-open green",
-        report="book-open-reader yellow", project="list-check red"),
+        report="book-open-reader orange", project="list-check red"),
     nature=dict(
         _self=f"book  {FC[4]}", development="building purple", data="database cyan", engineering="gears green",
         research="book-atlas yellow", science="vial red"),
@@ -91,11 +94,14 @@ _FACET = dict(
         _self=f"stethoscope  {FC[6]}", step="shoe-prints purple", story="dragon cyan", epic="shield green",
         milestone="bullseye yellow", release="truck red"),
     cost=dict(
-        _self=f"wallet  {FC[7]}", farthing="piggy-bank purple", penny="coins cyan", shilling="sun green",
-        crown="crown yellow", pound="money-bill red"),
+        _self=f"wallet  {FC[7]}", farthing="_one_cent purple", penny="_ten_cent cyan", shilling="_twenty_cent green",
+        crown="_half_euro yellow", pound="_one_euro red"),
+    # cost=dict(
+    #     _self=f"wallet  {FC[7]}", farthing="_one_cent purple", penny="coins cyan", shilling="sun green",
+    #     crown="crown yellow", pound="money-bill red"),
     risk=dict(
         _self=f"radiation  {FC[8]}", low="circle-radiation purple", moderate="biohazard cyan", medium="fire green",
-        high="bomb yellow", extreme="explosion red"),
+        high="bomb yellow", extreme="explosion brightred"),
     value=dict(
         _self=f"heart  {FC[9]}", common="spray-can-sparkles purple", magic="hand-sparkles cyan",
         rare="star-half-stroke green", legendary="star yellow", mythical="wand-sparkles red"),
@@ -160,6 +166,24 @@ class KanbanModel:
         self.counter += 1
         return next_id
 
+    def __repr(self):
+        attributes = dir(self)
+        items = []
+        for n in attributes:
+            if not n.startswith("__"):
+                repr_key = escape_string(n)
+                repr_value = repr(getattr(self, n))
+                items.append(f"{repr_key} = {repr_value}")
+        return "{}( {} )".format(self.__class__.__name__, ", ".join(items))
+
+    def __repr__(self):
+        return json_repr(self)
+
+    def __repr_(self):
+        att = "schema_revision counter steps_colors tasks_colors tasks".split()
+        r = repr({at: repr(getattr(self, at)) for at in att})
+        return r
+
 
 # ----------------------------------------------------------
 class Task:
@@ -189,6 +213,10 @@ class Task:
         extras = [self.tags, self.users, self.calendar, self.comments, self.external_links]
         names = "self tags users calendar comments external_links".split()
         return [icon for icon, count in zip(names, extras) if count]
+
+    def __repr__(self):
+        # att = "calendar color_id comments desc external_links id parent_id progress tags task_ids users".split()
+        return json_repr(self)
 
 
 # ----------------------------------------------------------
@@ -276,12 +304,23 @@ class KanbanView:
     def __init__(self, kanban):
         self.kanban = kanban
         self.board = KanbanBoard(kanban)
+        self.board.external_link.bind('click', self.dump)
         # doc['load_kanban'].bind('click', self.load)
         # doc['save_kanban'].bind('click', self.save)
         # doc['dump'].bind('click', self.dump)
 
+    @staticmethod
+    def create_script_tag(src="icons.svg"):
+        import urllib.request
+        _fp = urllib.request.urlopen(src)
+        _data = _fp.read()
+        _tag = doc["_money_"]
+        _tag.html = _data
+        return _tag
+
     def draw(self):
         doc.body.style.backgroundImage = "url(https://wallpaperaccess.com/full/36356.jpg)"
+        self.create_script_tag()
         step_ids = self.kanban.tasks["root"].task_ids
         width = 100 / len(step_ids)
         board = doc["board"]
@@ -328,10 +367,16 @@ class KanbanView:
             f_div = html.DIV(Class="task_icon", style={"background-color": facet_.color})
             # f_ico = html.I(Class=f"fa fa-{facet_.icon}")
             title = f"{facet_.name}:{tag.name}"
-            t_ico = html.I(Class=f"fa fa-{tag.icon}", style=dict(color=tag.color), title=title)
+            if tag.icon.startswith("_"):
+                t_ico = svg.svg()
+                label = tag.icon[1:]
+                img = svg.use(href=f"#{label}", x=0, y=0, width=11, height=11, transform=f"scale(0.16)")
+                _ = t_ico <= img
+            else:
+                t_ico = html.I(Class=f"fa fa-{tag.icon}", style=dict(color=tag.color), title=title)
             # _ = f_div <= f_ico
             _ = f_div <= t_ico
-            return html.TD(f_div)
+            return html.TD(f_div, title=title)
 
         node = html.DIV(Class="task", Id=task.id, draggable=True)
         node.style.backgroundColor = self.kanban.tasks_colors[task.color_id]
@@ -496,7 +541,9 @@ class KanbanView:
         storage["kanban"] = txt
 
     def dump(self, *_):
-        code = "storage['kanban'] = " + instance_repr(self.kanban)
+        # code = "storage['kanban'] = " + instance_repr(self.kanban)
+        # code = json.dumps(self.kanban, default=json_repr)
+        code = json.dumps(repr(self.kanban))
         alert(code)
 
 
@@ -548,6 +595,32 @@ def instance_repr(o):
         s = "{}( {} )".format(o.__class__.__name__, ", ".join(items))
 
     return s
+
+
+# ----------------------------------------------------------
+def json_repr(o):
+    if isinstance(o, dict):
+        return {k: repr(v) for k, v in o.items()}
+    if isinstance(o, tuple) or isinstance(o, list) or isinstance(o, set):
+        return [repr(i) for i in o]
+
+    elif isinstance(o, float) or isinstance(o, int):
+        return str(o)
+
+    elif isinstance(o, str):
+        return quoted_escape_string(o)
+
+    else:
+        attributes = [
+            n for n in o.__dict__ if not n.startswith("__") and not callable(n) and not type(n) is staticmethod]
+        print(o.__class__.__name__, attributes)
+        return {o.__class__.__name__: {k: json_repr(getattr(o, k)) for k in attributes if getattr(o, k)}}
+        # for n in attributes:
+        #     if not n.startswith("__") and not callable(n) and not type(n) is staticmethod:
+        #         repr_key = escape_string(n)
+        #         repr_value = repr(getattr(o, n))
+        #         items.append(f"{repr_key} = {repr_value}")
+        # return "{}( {} )".format(o.__class__.__name__, ", ".join(items))
 
 
 # ----------------------------------------------------------
@@ -628,7 +701,6 @@ def main():
 
     if ret:
         init_demo(kanban)
-
         kanban_view = KanbanView(kanban)
         kanban_view.load()
     else:

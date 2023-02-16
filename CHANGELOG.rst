@@ -20,8 +20,10 @@ Added
 *  initial modifications from original code.
 *  added board label with current task timing.
 *  remove delete button from task.
-*  add several properties and icons to task.
-*  Activ painter to persist kanban (fail).
+*  Activ painter to persist kanban (fail). @14
+*  add several properties and icons to task. @14
+*  change to pastel palette and introduce facets @15
+*  propose save with JSON, add svg icons @16
 
 
 Laboratório de Automação de Sistemas Educacionais

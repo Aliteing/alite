@@ -1,6 +1,6 @@
-Platforma Genérica de Conteúdo
+A Portal Fan Game
 ==============================
- |Alit|
+ |Porteira|
 
 Platforma Genérica de Conteúdo
 
