@@ -36,6 +36,7 @@ Changelog
 .. versionadded::    23.03
         improve JSON representation. (01)
         moved tag insertion to init demo (02)
+        add class Board instead of plain root (02)
 
 """
 # ----------------------------------------------------------
@@ -50,20 +51,20 @@ import json
 # ----------------------------------------------------------
 IcoColor = namedtuple("IcoColor", "name icon color")
 SCHEMA_REVISION = "1.0"
-
+LABASE = "LABASE"
 STEPS = [
     "REPOSITÓRIO", "PENDENTES", "PLANEJANDO", "DESPACHO", "EXECUTANDO", "TERMINADA"
 ]
 
-STEPS_COLORS = [
+STEPS_COLORS = (
     "#777777", "#888888", "#999999", "#AAAAAA", "#BBBBBB", "#CCCCCC", "#DDDDDD", "#EEEEEE", "#FFFFFFF"
-]
+)
 
 _TASKS_COLORS = [
     "#EE0000", "#00CC00", "#0088EE", "#EEEE00", "#EEA500"
 ]
-TASKS_COLORS = "peachpuff rosybrown lightyellow greenyellow palegreen" \
-               " lightcyan aquamarine burlywood plum orchid".split()
+TASKS_COLORS = tuple("peachpuff rosybrown lightyellow greenyellow palegreen"
+                     " lightcyan aquamarine burlywood plum orchid".split())
 
 FACET_COLORS = FC = "darkred darkorange peach gold darkgreen navy" \
                " indigo purple deeppink brown".split()
@@ -122,18 +123,20 @@ class KanbanException(Exception):
 class KanbanModel:
     NEW = True
 
-    def __init__(self, counter=1, schema_revision=None, steps_colors=None,
-                 tasks_colors=None, tasks=None):
+    def __init__(self, counter=1, schema_revision=None, steps_colors=(),
+                 tasks_colors=(), tasks=None):
         self.schema_revision = schema_revision
-        self.counter = int(counter)
+        self._counter = int(counter)
         self.steps_colors = list(steps_colors)
         self.tasks_colors = list(tasks_colors)
 
         if tasks is None:
-            root = Task("root", "", "ROOT", 0, 0, [])
-            self.tasks = {"root": root}
+            self.board = Board(counter=self._counter)
+            self.tasks = {"root": self.board}
         else:
-            self.tasks = tasks
+            self.board = Board(**(tasks["root"]["Board"]))
+            tasks.pop("root")
+            self.tasks = [Task(**(tsk["Task"])) for tsk in tasks]
 
     def add_step(self, desc, color_id):
         return self.add_task("root", desc, color_id, 0, prefix="step{}")
@@ -167,32 +170,17 @@ class KanbanModel:
         dst_task.add_task(task)
 
     def get_next_id(self, prefix):
-        next_id = prefix.format(self.counter)
-        self.counter += 1
+        next_id = prefix.format(self.board.counter)
+        self.board.counter += 1
         return next_id
-
-    def __repr(self):
-        attributes = dir(self)
-        items = []
-        for n in attributes:
-            if not n.startswith("__"):
-                repr_key = escape_string(n)
-                repr_value = repr(getattr(self, n))
-                items.append(f"{repr_key} = {repr_value}")
-        return "{}( {} )".format(self.__class__.__name__, ", ".join(items))
 
     def __repr__(self):
         return json_repr(self)
 
-    def __repr_(self):
-        att = "schema_revision counter steps_colors tasks_colors tasks".split()
-        r = repr({at: repr(getattr(self, at)) for at in att})
-        return r
-
 
 # ----------------------------------------------------------
 class Task:
-    def __init__(self, _id=None, parent_id=None, desc=None, color_id=None, progress=None,
+    def __init__(self, _id=None, parent_id=None, desc=None, color_id=0, progress=0,
                  task_ids=(), tags=(), users=(), calendar=(), comments=(), external_links=()):
         self.id = _id
         self.parent_id = parent_id
@@ -220,8 +208,19 @@ class Task:
         return [icon for icon, count in zip(names, extras) if count]
 
     def __repr__(self):
-        # att = "calendar color_id comments desc external_links id parent_id progress tags task_ids users".split()
         return json_repr(self)
+
+
+# ----------------------------------------------------------
+class Board(Task):
+    def __init__(self, _id=LABASE, parent_id=None, counter=1, schema_revision=SCHEMA_REVISION,
+                 steps_colors=STEPS_COLORS, tasks_colors=TASKS_COLORS, tasks=(), current=None):
+        super().__init__(_id=_id, parent_id=parent_id, task_ids=tasks)
+        self.schema_revision = schema_revision
+        self.counter = int(counter)
+        self.steps_colors = list(steps_colors)
+        self.tasks_colors = list(tasks_colors)
+        self.current = current
 
 
 # ----------------------------------------------------------
@@ -336,6 +335,23 @@ class KanbanView:
         req.set_header('content-type', 'application/json')
         resp = req.send(data)
         print(resp)
+
+    def read(self, *_):
+        def on_complete(_req):
+            if _req.status == 200 or req.status == 0:
+                self.kanban = KanbanModel(tasks=json.loads(_req.text))
+
+                print("complete ok>>>> " + _req.text)
+            else:
+                print("error detected>>>> " + _req.text)
+        page = "/api/load"
+
+        req = ajax.Ajax()
+        req.bind('complete', on_complete)
+        req.open('GET', page, True)
+        # req.set_header('content-type', 'application/x-www-form-urlencoded')
+        req.set_header('content-type', 'application/json')
+        resp = req.send()
 
     @staticmethod
     def create_script_tag(src="icons.svg"):
@@ -740,6 +756,8 @@ def main():
     if ret:
         init_demo(kanban)
         kanban_view = KanbanView(kanban)
+        kanban_view.write(0)
+        kanban_view.read()
         kanban_view.load()
     else:
         doc.open("about:blank")
