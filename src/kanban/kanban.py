@@ -29,16 +29,19 @@ Changelog
         initial modifications from original code.
         added board label with current task timing.
         remove delete button from task.
-        add several properties and icons to task. @14
-        change to pastel palette and introduce facets @15
-        propose save with JSON, add svg icons @16
+        add several properties and icons to task. (14)
+        change to pastel palette and introduce facets. (15)
+        propose save with JSON, add svg icons. (16)
+
+.. versionadded::    23.03
+        improve JSON representation. (01)
+        moved tag insertion to init demo (02)
 
 """
 # ----------------------------------------------------------
 import time
-
 from browser import document as doc
-from browser import confirm, prompt, alert, svg, window
+from browser import confirm, prompt, alert, svg, window, ajax
 from browser.local_storage import storage
 import browser.html as html
 from collections import namedtuple
@@ -117,6 +120,8 @@ class KanbanException(Exception):
 
 # ----------------------------------------------------------
 class KanbanModel:
+    NEW = True
+
     def __init__(self, counter=1, schema_revision=None, steps_colors=None,
                  tasks_colors=None, tasks=None):
         self.schema_revision = schema_revision
@@ -227,7 +232,7 @@ class KanbanBoard:
         self.board_name = "LABASE"
         self.board_span = html.SPAN(self.board_name+"&nbsp;&nbsp;&nbsp;", Id="_control_board_name")
         self.external_link = html.SPAN(Id="_external_link", Class="fa fa-external-link")
-        self.menu = html.SPAN(Id="_external_link", Class="fa fa-bars")
+        self.menu = html.SPAN(Id="_icon_menu", Class="fa fa-bars")
         self.controls = [html.SPAN("&nbsp;", Id=f"_control_{ico}", Class=f"fa-solid fa-{ico}") for ico in control]
         self.board = doc["board"]
         self.task_name = ""
@@ -302,12 +307,35 @@ class KanbanBoard:
 # ----------------------------------------------------------
 class KanbanView:
     def __init__(self, kanban):
+        self.new = True
         self.kanban = kanban
         self.board = KanbanBoard(kanban)
-        self.board.external_link.bind('click', self.dump)
+        self.board.external_link.bind('click', self.write)
         # doc['load_kanban'].bind('click', self.load)
         # doc['save_kanban'].bind('click', self.save)
         # doc['dump'].bind('click', self.dump)
+        # self.init_model() if self.new else None
+
+    def write(self, _):
+        page = "/api/save"
+        txt = json.dumps(repr(self.kanban))
+        print(txt)
+        # data = parse.urlencode(txt).encode()
+        data = txt
+
+        def on_complete(_req):
+            if _req.status == 200 or req.status == 0:
+                print("complete ok>>>> " + _req.text)
+            else:
+                print("error detected>>>> " + _req.text)
+
+        req = ajax.Ajax()
+        req.bind('complete', on_complete)
+        req.open('POST', page, True)
+        # req.set_header('content-type', 'application/x-www-form-urlencoded')
+        req.set_header('content-type', 'application/json')
+        resp = req.send(data)
+        print(resp)
 
     @staticmethod
     def create_script_tag(src="icons.svg"):
@@ -320,7 +348,7 @@ class KanbanView:
 
     def draw(self):
         doc.body.style.backgroundImage = "url(https://wallpaperaccess.com/full/36356.jpg)"
-        self.create_script_tag()
+        # self.create_script_tag()
         step_ids = self.kanban.tasks["root"].task_ids
         width = 100 / len(step_ids)
         board = doc["board"]
@@ -361,8 +389,6 @@ class KanbanView:
             self.draw_task(task, parent_node)
 
     def draw_task(self, task, parent_node):
-        from random import sample, randint
-
         def do_tag(facet_, tag):
             f_div = html.DIV(Class="task_icon", style={"background-color": facet_.color})
             # f_ico = html.I(Class=f"fa fa-{facet_.icon}")
@@ -384,8 +410,9 @@ class KanbanView:
         facet = {key: IcoColor(key, *(value["_self"].split()))for key, value in _FACET.items()}
         facets = {fk: {tk: IcoColor(tk, *tv.split()) for tk, tv in fv.items() if tk != "_self"}
                   for fk, fv in _FACET.items()}
-        cmd = [do_tag(facet[_facet], _tag) for _facet, _tags in sample(list(facets.items()), randint(1, 6))
-               for _tag in sample(list(_tags.values()), 1)]
+        cmd = [do_tag(facet[_facet], facets[_facet][_tag]) for _facet, _tag in task.tags if _tag != "_self"]
+        # cmd = [do_tag(facet[_facet], _tag) for _facet, _tags in sample(list(facets.items()), randint(1, 6))
+        #        for _tag in sample(list(_tags.values()), 1)]
 
         progress = html.DIV(Class="task_progress")
 
@@ -602,13 +629,15 @@ def json_repr(o):
     if isinstance(o, dict):
         return {k: repr(v) for k, v in o.items()}
     if isinstance(o, tuple) or isinstance(o, list) or isinstance(o, set):
-        return [repr(i) for i in o]
+        # return [repr(i) for i in o]
+        return [i for i in o]
 
     elif isinstance(o, float) or isinstance(o, int):
         return str(o)
 
     elif isinstance(o, str):
-        return quoted_escape_string(o)
+        return o
+        # return quoted_escape_string(o)
 
     else:
         attributes = [
@@ -646,6 +675,14 @@ def ev_callback(method, *args):
 
 # ----------------------------------------------------------
 def init_demo(kanban):
+
+    def init_model():
+        from random import sample, randint, choice
+        for tsk_id, tsk_obj in kanban.tasks.items():
+            tags = [(fc, choice(list(tg.keys()))) for fc, tg in sample(list(_FACET.items()), randint(1, 3))
+                    if tsk_id.startswith("task")]
+            tsk_obj.tags = tags
+
     for color_id, desc in enumerate(STEPS):
         kanban.add_step(desc, color_id)
 
@@ -667,6 +704,7 @@ def init_demo(kanban):
     kanban.add_task(task.id, 'Waiting QA', 4, 0)
 
     kanban.add_task("step6", 'Project D', 1, 100)
+    init_model()
 
 
 def main():

@@ -12,6 +12,15 @@ The format is based on `Keep a Changelog`_.
 -------------
 - to be defined
 
+`23.03`_
+----------------
+
+Added
++++++
+
+* improve JSON representation. (01)
+* moved tag insertion to init demo (02)
+
 `23.02`_
 ----------------
 
@@ -24,7 +33,6 @@ Added
 *  add several properties and icons to task. @14
 *  change to pastel palette and introduce facets @15
 *  propose save with JSON, add svg icons @16
-
 
 Laboratório de Automação de Sistemas Educacionais
 -------------------------------------------------
@@ -39,6 +47,7 @@ LABASE_ - NCE_ - UFRJ_
 .. _NCE: http://nce.ufrj.br
 .. _UFRJ: http://www.ufrj.br
 .. _Keep a Changelog: https://keepachangelog.com/en/1.0.0/
+.. _23.03: https://github.com/Aliteing/alite/releases
 .. _23.02: https://github.com/Aliteing/alite/releases
 
 .. |LABASE| image:: https://cetoli.gitlab.io/spyms/image/labase-logo-8.png

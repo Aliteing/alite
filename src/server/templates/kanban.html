@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title id="_tt_">{{titulo}}</title>
+    <!-- stylesheets -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8">
+    <!-- fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed" rel="stylesheet">
+    <!--    <script src="https://kit.fontawesome.com/ee888cdf8b.js" crossorigin="anonymous"></script>-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css"
+          integrity="sha512-SzlrxWUlpfuzQ+pcUCosxcglQRNAq/DZjVsC0lE40xsADsfeQoEypE+enwcOiGjk/bSuGGKHEyjSoQ1zVisanQ=="
+          crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="shortcut icon" href="/image/favico.ico" type="image/x-icon"/>
+    <script type="text/javascript" src="https://cdn.rawgit.com/brython-dev/brython/3.8.0/www/src/brython.js">
+    </script>
+    <script type="text/javascript" src="https://cdn.rawgit.com/brython-dev/brython/3.8.0/www/src/brython_stdlib.js">
+    </script>
+    <script type="text/javascript">
+        var GONE = '1';
+    </script>
+            <style text="text/css">
+
+            .listing {
+                font-family : monospace;
+                }
+
+            .board {
+                float : left;
+                width : 100%;
+                display : table;
+                }
+
+            .step {
+                display : table-cell;
+                padding-bottom : 5em;
+                height : 100%;
+                /*opacity : 0.3*/
+                }
+
+            .step_header {
+                padding : 0.2em;
+                border-radius : 5px;
+                border : 2px solid black;
+                background-color : rgba(255, 255, 255, 0.4);
+                margin : 5px;
+                outline : 0px none;
+                vertical-align : baseline;
+                font-weight : bold;
+                }
+
+            .time_bar {
+                padding : 0.2em;
+                border-radius : 8px;
+                /*border : 1px solid black;*/
+                background-color : rgba(255, 255, 255, 0.4);
+                margin : 1px;
+                outline : 0px none;
+                vertical-align : baseline;
+                /*font-weight : bold;*/
+                /*display: inline;*/
+                }
+
+            .step_title {
+                display : table-cell;
+                cursor : cell;
+                width : 100%;
+                text-align : center;
+                }
+
+            .step_count {
+                display : table-cell;
+                padding-left : 1em;
+                padding-right : 1em;
+                text-align : center;
+                }
+
+            .task {
+                cursor : pointer;
+                padding : 0.2em;
+                min-height : 3em;
+                border-radius : 5px;
+                border : 1px solid black;
+                margin : 5px;
+                padding-bottom : 2em;
+                outline : 0px none;
+                vertical-align : baseline;
+                }
+
+            .task_command {
+                height : 1.2em;
+                width : 100%;
+                }
+
+            .task_command_delete {
+                height : 0.8em;
+                /*border : 1px solid black;*/
+                text-align : center;
+                /*padding-left : 2px;*/
+                /*padding-right : 2px;*/
+                padding: 2px;
+                /*vertical-align : middle;*/
+                font-size: 11px;
+                }
+
+            .task_progress {
+                position : relative;
+                width : 100%;
+                height : 0.8em;
+                border : 1px solid black;
+                background-color : rgba(255, 255, 255, 0.5)
+                }
+
+            .task_icon {
+                border-radius : 8px;
+                position : relative;
+                /*width : 100%;*/
+                height : 1.2em;
+                border : 1px solid black;
+                display : block;
+                text-align: center;
+                min-width: 1.1em;
+                font-size: 13px;
+                 padding: 1px;
+              }
+
+            .task_progress_bar {
+                height : inherit;
+                position : absolute;
+                background-color : rgba(0, 0, 0, .3)
+                }
+
+            .task_progress_text {
+                height : inherit;
+                position : absolute;
+                width : 100%;
+                text-align : center;
+                margin : 0px;
+                font-size: smaller;
+                /* font-weight : bold; */
+                vertical-align : middle;
+                }
+
+            .task_desc {
+                margin : 1px;
+                }
+
+        </style>
+
+</head>
+<body bgcolor="#003333" onload="brython({debug: 1})">
+<script type="text/python">
+        # This file is part of  program Alite
+        # Copyright © 2022  Carlo Oliveira <carlo@nce.ufrj.br>,
+        # `Labase <http://labase.selfip.org/>`__; `GPL <http://is.gd/3Udt>`__.
+        # SPDX-License-Identifier: (GPLv3-or-later AND LGPL-2.0-only) WITH bison-exception
+        from browser import document, alert, html, window, ajax, timer, svg
+        from browser.template import Template
+        Template("_version_").render(version="23.02")
+        Template("_tt_").render(titulo="Alite Kanban")
+
+        from kanban import main
+        main()
+
+</script>
+<div id="_main_" style="position:relative; width:100%; height:100%;">
+    <div id="board" style="margin: 0 auto; position:relative; top:0px;">
+        <img src="/image/alite_logo.jpg" alt="ALITE"
+             style="width:100vw; height:100vh; object-fit: cover;"/>
+        <div style="position: absolute; top: 50%; left: 50%; opacity:0.3;
+            margin-top: -100px; margin-left: -100px; width: 200px; height: 200px;">
+            <img src="https://imgur.com/uc56UAq.gif" width="200px" alt="LOADING" style=""/>
+        </div>
+    </div>
+</div>
+<div style="position:absolute; top:700px; left:2px; height: 10px;">
+    <p>
+            <span id="_version_" style="color:#FFFFEE;font-size:8px;font-family:courier new,courier,monospace;">
+                {{version}}</span>
+    </p>
+</div>
+
+</body>
+</html>
