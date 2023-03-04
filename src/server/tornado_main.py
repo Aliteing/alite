@@ -26,6 +26,7 @@ Changelog
 ---------
 .. versionadded::    23.03
         test a rest api with tornado.
+        add a fake persistence (03).
 
 """
 import os
@@ -49,11 +50,17 @@ class Kanban(RequestHandler):
 
     def get(self):
         # self.write({'items': items})
-        self.write(json.dumps(Kanban.tasks))
+        with open("kbj.json", "r") as fjson:
+            items = json.load(fjson)
+            self.write(json.dumps(items))
+        # self.write(json.dumps(Kanban.tasks))
 
     def post(self, *_):
         items = json.loads(self.request.body)
         Kanban.kanban = {att: val for att, val in items["KanbanModel"].items() if att != "tasks"}
+        with open("kbj.json", "w") as fjson:
+            json.dump(items, fjson)
+        # print("kanban post", items)
         Kanban.tasks = items["KanbanModel"]["tasks"]
         self.write({'message': 'whole base saved'})
 

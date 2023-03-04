@@ -29,14 +29,15 @@ Changelog
         initial modifications from original code.
         added board label with current task timing.
         remove delete button from task.
-        add several properties and icons to task. (14)
-        change to pastel palette and introduce facets. (15)
-        propose save with JSON, add svg icons. (16)
+        add several properties and icons to task (14).
+        change to pastel palette and introduce facets (15).
+        propose save with JSON, add svg icons (16).
 
 .. versionadded::    23.03
-        improve JSON representation. (01)
-        moved tag insertion to init demo (02)
-        add class Board instead of plain root (02)
+        improve JSON representation (01).
+        moved tag insertion to init demo (02).
+        add class Board instead of plain root (02).
+        fix KanbanModel to use Board (03).
 
 """
 # ----------------------------------------------------------
@@ -71,14 +72,11 @@ FACET_COLORS = FC = "darkred darkorange peach gold darkgreen navy" \
 
 TIME_FMT = "%Y/%m/%d %H:%M:%S"
 
-TAGS = dict(
-    use_levels=dict(
-        cloud="\u26C5 ivory", kite="\u1FA81 cyan", ship="\u1F6F3 blue", fish="\u1F41F navy", crab="\u1F980 slate"))
 DIAL = [f"dial-{pos if pos != '_' else ''}" for pos in "off min low med-low med _ high max".split()]
 _FACET = dict(
     level=dict(
         _self=f"gauge {FC[0]}",
-        cloud="cloud ivory", kite="dove cyan", ship="ship blue", fish="fish navy", crab="shrimp slate"),
+        cloud="cloud ivory", kite="dove cyan", ship="ship cyan", fish="fish navy", crab="shrimp slate"),
     phase=dict(
         _self=f"timeline  {FC[1]}", inception="brain purple", elaboration="ruler cyan",
         construction="hammer green", review="eye yellow", transition="truck-fast red"),
@@ -86,10 +84,10 @@ _FACET = dict(
         _self=f"code  {FC[2]}", spike="road-spikes purple", feature="box cyan", enhancement="ribbon green",
         refactor="industry orange", bugfix="bug red"),
     text=dict(
-        _self=f"book  {FC[3]}", document="pen purple", tutorial="graduation-cap cyan", manual="book-open green",
+        _self=f"book  {FC[3]}", document="pen purple", tutorial="graduation-cap blue", manual="book-open green",
         report="book-open-reader orange", project="list-check red"),
     nature=dict(
-        _self=f"book  {FC[4]}", development="building purple", data="database cyan", engineering="gears green",
+        _self=f"book  {FC[4]}", development="building magenta", data="database cyan", engineering="gears Chartreuse",
         research="book-atlas yellow", science="vial red"),
     work=dict(
         _self=f"person  {FC[5]}", planning="pen-ruler purple", activity="person-digging cyan",
@@ -127,24 +125,48 @@ class KanbanModel:
                  tasks_colors=(), tasks=None):
         self.schema_revision = schema_revision
         self._counter = int(counter)
-        self.steps_colors = list(steps_colors)
-        self.tasks_colors = list(tasks_colors)
+        self._steps_colors = list(steps_colors)
+        self._tasks_colors = list(tasks_colors)
+        self.tasks = {"": Task()}
 
         if tasks is None:
-            self.board = Board(counter=self._counter)
-            self.tasks = {"root": self.board}
+            self.board = Board(counter=self._counter, schema_revision=schema_revision, steps_colors=steps_colors,
+                               tasks_colors=tasks_colors)
+            task: Task = self.board
+            self.tasks = {"board": task}
+            # self.tasks = {"root": self.board}
         else:
-            self.board = Board(**(tasks["root"]["Board"]))
-            tasks.pop("root")
-            self.tasks = [Task(**(tsk["Task"])) for tsk in tasks]
+            self.board = Board(**(tasks["board"]["Board"]))
+            # self.board = Board(**(tasks["root"]["Board"]))
+            # tasks.pop("board")
+            # tasks.pop("root")
+            # self.tasks = [Task(**(tsk["Task"])) for tsk in tasks if isinstance(tsk, dict)]
+            self.tasks = {tsk_id: Task(**(tsk["Task"])) for tsk_id, tsk in tasks["tasks"].items()
+                          if isinstance(tsk, dict)
+                          and "Task" in tsk} if isinstance(tasks, dict) else {"board": self.board}
+        # print("got tasks ok>>>> ", self.board.task_ids)
+        # [print(tsk, a_tsk) for tsk, a_tsk in tasks["tasks"].items()] if isinstance(tasks, dict) else print("no tasks")
+
+    @property
+    def steps_colors(self):
+        return self.board.steps_colors
+
+    @property
+    def tasks_colors(self):
+        return self.board.tasks_colors
 
     def add_step(self, desc, color_id):
-        return self.add_task("root", desc, color_id, 0, prefix="step{}")
+        step = self.add_task("board", desc, color_id, 0, prefix="step{}")
+        self.board.add_task(step)
+        return step
+        # return self.add_task("board", desc, color_id, 0, prefix="step{}")
+        # return self.add_task("root", desc, color_id, 0, prefix="step{}")
 
     def add_task(self, parent_id, desc, color_id, progress, prefix="task{}"):
         task_id = self.get_next_id(prefix)
         task = Task(task_id, 0, desc, color_id, progress, [])
-        self.tasks[task.id] = task
+        # print("task.oid", task.oid, "self.tasks", self.tasks)
+        self.tasks[task.oid] = task
 
         parent_task = self.tasks[parent_id]
         parent_task.add_task(task)
@@ -180,9 +202,9 @@ class KanbanModel:
 
 # ----------------------------------------------------------
 class Task:
-    def __init__(self, _id=None, parent_id=None, desc=None, color_id=0, progress=0,
+    def __init__(self, oid="", parent_id=None, desc=None, color_id=0, progress=0,
                  task_ids=(), tags=(), users=(), calendar=(), comments=(), external_links=()):
-        self.id = _id
+        self.oid = oid
         self.parent_id = parent_id
         self.desc = desc
         self.color_id = int(color_id)
@@ -195,11 +217,11 @@ class Task:
         self.external_links = list(external_links)
 
     def add_task(self, task):
-        self.task_ids.append(task.id)
-        task.parent_id = self.id
+        self.task_ids.append(task.oid)
+        task.parent_id = self.oid
 
     def remove_task(self, task):
-        self.task_ids.remove(task.id)
+        self.task_ids.remove(task.oid)
         task.parent_id = None
 
     def existing_extras(self):
@@ -213,9 +235,9 @@ class Task:
 
 # ----------------------------------------------------------
 class Board(Task):
-    def __init__(self, _id=LABASE, parent_id=None, counter=1, schema_revision=SCHEMA_REVISION,
-                 steps_colors=STEPS_COLORS, tasks_colors=TASKS_COLORS, tasks=(), current=None):
-        super().__init__(_id=_id, parent_id=parent_id, task_ids=tasks)
+    def __init__(self, oid=LABASE, parent_id=None, counter=1, schema_revision=SCHEMA_REVISION,
+                 steps_colors=STEPS_COLORS, tasks_colors=TASKS_COLORS, task_ids=(), current=None):
+        super().__init__(oid=oid, parent_id=parent_id, task_ids=task_ids)
         self.schema_revision = schema_revision
         self.counter = int(counter)
         self.steps_colors = list(steps_colors)
@@ -318,13 +340,13 @@ class KanbanView:
     def write(self, _):
         page = "/api/save"
         txt = json.dumps(repr(self.kanban))
-        print(txt)
+        # print(txt)
         # data = parse.urlencode(txt).encode()
         data = txt
 
         def on_complete(_req):
             if _req.status == 200 or req.status == 0:
-                print("complete ok>>>> " + _req.text)
+                print("complete ok>>>> ")
             else:
                 print("error detected>>>> " + _req.text)
 
@@ -333,15 +355,16 @@ class KanbanView:
         req.open('POST', page, True)
         # req.set_header('content-type', 'application/x-www-form-urlencoded')
         req.set_header('content-type', 'application/json')
-        resp = req.send(data)
-        print(resp)
+        req.send(data)
+        # print(resp)
 
     def read(self, *_):
         def on_complete(_req):
             if _req.status == 200 or req.status == 0:
-                self.kanban = KanbanModel(tasks=json.loads(_req.text))
+                self.kanban = KanbanModel(tasks=json.loads(_req.text)["KanbanModel"])
+                self.draw()
 
-                print("complete ok>>>> " + _req.text)
+                print("complete ok>>>> ")  # + _req.text)
             else:
                 print("error detected>>>> " + _req.text)
         page = "/api/load"
@@ -351,7 +374,7 @@ class KanbanView:
         req.open('GET', page, True)
         # req.set_header('content-type', 'application/x-www-form-urlencoded')
         req.set_header('content-type', 'application/json')
-        resp = req.send()
+        req.send()
 
     @staticmethod
     def create_script_tag(src="icons.svg"):
@@ -365,7 +388,9 @@ class KanbanView:
     def draw(self):
         doc.body.style.backgroundImage = "url(https://wallpaperaccess.com/full/36356.jpg)"
         # self.create_script_tag()
-        step_ids = self.kanban.tasks["root"].task_ids
+        # step_ids = self.kanban.tasks["board"].task_ids
+        step_ids = self.kanban.board.task_ids
+        # step_ids = self.kanban.tasks["board"].task_ids
         width = 100 / len(step_ids)
         board = doc["board"]
         clear_node(board)
@@ -375,7 +400,7 @@ class KanbanView:
             self.draw_step(step, width, board)
 
     def draw_step(self, step, width, board):
-        node = html.DIV(id=step.id, Class="step")
+        node = html.DIV(id=step.oid, Class="step")
         node.style.width = percent(width)
         # node.style.backgroundColor = self.kanban.steps_colors[step.color_id]
         rgb = int(f"0x{self.kanban.steps_colors[step.color_id][-2:]}", 16)
@@ -388,7 +413,7 @@ class KanbanView:
         title = html.PRE(step.desc, Class="step_title")
         _ = header <= title
 
-        count = html.PRE(0, id=f"{step.id} count", Class="step_count")
+        count = html.PRE(0, id=f"{step.oid} count", Class="step_count")
         count.text = len(step.task_ids)
         _ = header <= count
 
@@ -420,7 +445,7 @@ class KanbanView:
             _ = f_div <= t_ico
             return html.TD(f_div, title=title)
 
-        node = html.DIV(Class="task", Id=task.id, draggable=True)
+        node = html.DIV(Class="task", Id=task.oid, draggable=True)
         node.style.backgroundColor = self.kanban.tasks_colors[task.color_id]
         _ = parent_node <= node
         facet = {key: IcoColor(key, *(value["_self"].split()))for key, value in _FACET.items()}
@@ -455,7 +480,7 @@ class KanbanView:
         # html.TD(command_delete)), Class="task_command")
         _ = node <= command
 
-        desc = html.P(Id=f"desc {task.id}", Class="task_desc")
+        desc = html.P(Id=f"desc {task.oid}", Class="task_desc")
         desc.html = task.desc
         _ = node <= desc
 
@@ -477,13 +502,13 @@ class KanbanView:
 
     def set_text(self, task):
         _ = self
-        desc = doc[f"desc {task.id}"]
+        desc = doc[f"desc {task.oid}"]
         clear_node(desc)
         desc.html = task.desc
 
     def drag_start(self, ev, task):
         _ = self
-        ev.data['text'] = task.id
+        ev.data['text'] = task.oid
         ev.data.effectAllowed = 'move'
 
         ev.stopPropagation()
@@ -501,7 +526,7 @@ class KanbanView:
         src_task_id = ev.data['text']
         src_task_node = doc[src_task_id]
 
-        dst_task_id = dst_task.id
+        dst_task_id = dst_task.oid
         dst_task_node = doc[dst_task_id]
 
         _ = dst_task_node <= src_task_node
@@ -513,7 +538,7 @@ class KanbanView:
         t = time.strftime(TIME_FMT)
         desc = prompt("New task", f"{step.desc} {t}")
         if desc:
-            task = self.kanban.add_task(step.id, desc, 0, 0)
+            task = self.kanban.add_task(step.oid, desc, 0, 0)
             self.draw_task(task, node)
 
     def remove_task(self, ev, task):
@@ -522,8 +547,8 @@ class KanbanView:
         text = "Confirm deletion of: " + task.desc
         ret = confirm(text)
         if ret:
-            del doc[task.id]
-            self.kanban.remove_task(task.id)
+            del doc[task.oid]
+            self.kanban.remove_task(task.oid)
 
     def change_task_color(self, ev, task, node):
         ev.stopPropagation()
@@ -658,7 +683,7 @@ def json_repr(o):
     else:
         attributes = [
             n for n in o.__dict__ if not n.startswith("__") and not callable(n) and not type(n) is staticmethod]
-        print(o.__class__.__name__, attributes)
+        # print(o.__class__.__name__, attributes)
         return {o.__class__.__name__: {k: json_repr(getattr(o, k)) for k in attributes if getattr(o, k)}}
         # for n in attributes:
         #     if not n.startswith("__") and not callable(n) and not type(n) is staticmethod:
@@ -706,18 +731,18 @@ def init_demo(kanban):
     kanban.add_task("step1", 'Project B<br>Add new Feature <b>B2</b>', 0, 0)
 
     task = kanban.add_task("step2", 'Project B<br>Feature <b>B1</b>', 3, 50)
-    kanban.add_task(task.id, 'Check B1.1 with XXX', 4, 75)
-    kanban.add_task(task.id, 'Wait for YYY to clarify B1.2', 4, 25)
-    kanban.add_task(task.id, 'Started B1.3', 2, 25)
+    kanban.add_task(task.oid, 'Check B1.1 with XXX', 4, 75)
+    kanban.add_task(task.oid, 'Wait for YYY to clarify B1.2', 4, 25)
+    kanban.add_task(task.oid, 'Started B1.3', 2, 25)
 
     task = kanban.add_task("step3", 'A1', 3, 75)
-    kanban.add_task(task.id, 'Dynamic design', 2, 75)
-    kanban.add_task(task.id, 'Static design', 1, 100)
+    kanban.add_task(task.oid, 'Dynamic design', 2, 75)
+    kanban.add_task(task.oid, 'Static design', 1, 100)
 
     kanban.add_task("step4", 'A2 Coding', 0, 0)
 
     task = kanban.add_task("step5", 'Project C', 3, 0)
-    kanban.add_task(task.id, 'Waiting QA', 4, 0)
+    kanban.add_task(task.oid, 'Waiting QA', 4, 0)
 
     kanban.add_task("step6", 'Project D', 1, 100)
     init_model()
@@ -754,11 +779,11 @@ def main():
     ret = True  # confirm("Click OK to accept condition of use\n\n" + _copyright)
 
     if ret:
-        init_demo(kanban)
+        # init_demo(kanban)
         kanban_view = KanbanView(kanban)
-        kanban_view.write(0)
+        # kanban_view.write(0)
         kanban_view.read()
-        kanban_view.load()
+        # kanban_view.load()
     else:
         doc.open("about:blank")
 
