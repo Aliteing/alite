@@ -38,6 +38,7 @@ Changelog
         moved tag insertion to init demo (02).
         add class Board instead of plain root (02).
         fix KanbanModel to use Board (03).
+        tags management (07).
 
 """
 # ----------------------------------------------------------

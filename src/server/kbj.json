@@ -1,1 +1,460 @@
-{"KanbanModel": {"_counter": "1", "board": {"Board": {"oid": "LABASE", "task_ids": ["step1", "step2", "step3", "step4", "step5", "step6"], "schema_revision": "1.0", "counter": "23", "steps_colors": ["#777777", "#888888", "#999999", "#AAAAAA", "#BBBBBB", "#CCCCCC", "#DDDDDD", "#EEEEEE", "#FFFFFFF"], "tasks_colors": ["peachpuff", "rosybrown", "lightyellow", "greenyellow", "palegreen", "lightcyan", "aquamarine", "burlywood", "plum", "orchid"]}}, "tasks": {"step1": {"Task": {"oid": "step1", "parent_id": "LABASE", "desc": "REPOSIT\u00d3RIO", "task_ids": ["task7", "task8"]}}, "step2": {"Task": {"oid": "step2", "parent_id": "LABASE", "desc": "PENDENTES", "color_id": "1", "task_ids": ["task9"]}}, "step3": {"Task": {"oid": "step3", "parent_id": "LABASE", "desc": "PLANEJANDO", "color_id": "2", "task_ids": ["task13"]}}, "step4": {"Task": {"oid": "step4", "parent_id": "LABASE", "desc": "DESPACHO", "color_id": "3", "task_ids": ["task16", "task20", "task21"]}}, "step5": {"Task": {"oid": "step5", "parent_id": "LABASE", "desc": "EXECUTANDO", "color_id": "4", "task_ids": ["task17"]}}, "step6": {"Task": {"oid": "step6", "parent_id": "LABASE", "desc": "TERMINADA", "color_id": "5", "task_ids": ["task19"]}}, "task7": {"Task": {"oid": "task7", "parent_id": "step1", "desc": "Project A<br>Add new Feature <b>A3</b>", "tags": [["code", "refactor"]]}}, "task8": {"Task": {"oid": "task8", "parent_id": "step1", "desc": "Project B<br>Add new Feature <b>B2</b>", "tags": [["phase", "elaboration"], ["nature", "engineering"]]}}, "task9": {"Task": {"oid": "task9", "parent_id": "step2", "desc": "Project B<br>Feature <b>B1</b>", "color_id": "3", "progress": "50", "task_ids": ["task10", "task11", "task12"], "tags": [["scope", "milestone"], ["value", "_self"], ["phase", "elaboration"]]}}, "task10": {"Task": {"oid": "task10", "parent_id": "task9", "desc": "Check B1.1 with XXX", "color_id": "4", "progress": "75", "tags": [["text", "project"], ["code", "enhancement"], ["scope", "milestone"]]}}, "task11": {"Task": {"oid": "task11", "parent_id": "task9", "desc": "Wait for YYY to clarify B1.2", "color_id": "4", "progress": "25", "tags": [["work", "activity"], ["nature", "science"]]}}, "task12": {"Task": {"oid": "task12", "parent_id": "task9", "desc": "Started B1.3", "color_id": "2", "progress": "25", "tags": [["risk", "_self"], ["nature", "science"], ["cost", "shilling"]]}}, "task13": {"Task": {"oid": "task13", "parent_id": "step3", "desc": "A1", "color_id": "3", "progress": "75", "task_ids": ["task14", "task15", "task22"], "tags": [["level", "cloud"], ["work", "activity"]]}}, "task14": {"Task": {"oid": "task14", "parent_id": "task13", "desc": "Dynamic design", "color_id": "2", "progress": "75", "tags": [["cost", "pound"], ["level", "crab"], ["value", "common"]]}}, "task15": {"Task": {"oid": "task15", "parent_id": "task13", "desc": "Static design", "color_id": "1", "progress": "100", "tags": [["code", "feature"]]}}, "task16": {"Task": {"oid": "task16", "parent_id": "step4", "desc": "A2 Coding", "tags": [["text", "project"]]}}, "task17": {"Task": {"oid": "task17", "parent_id": "step5", "desc": "Project C", "color_id": "3", "task_ids": ["task18"], "tags": [["scope", "milestone"], ["work", "_self"]]}}, "task18": {"Task": {"oid": "task18", "parent_id": "task17", "desc": "Waiting QA", "color_id": "4", "tags": [["text", "_self"]]}}, "task19": {"Task": {"oid": "task19", "parent_id": "step6", "desc": "Project D", "color_id": "1", "progress": "100", "tags": [["text", "tutorial"]]}}, "task20": {"Task": {"oid": "task20", "parent_id": "step4", "desc": "Kanban tags CRUD"}}, "task21": {"Task": {"oid": "task21", "parent_id": "step4", "desc": "Manage Menu", "color_id": "1"}}, "task22": {"Task": {"oid": "task22", "parent_id": "task13", "desc": "Improve tag formating"}}}}}
+{
+  "KanbanModel": {
+    "_counter": "1",
+    "tasks": {
+      "step1": {
+        "Task": {
+          "oid": "step1",
+          "parent_id": "LABASE",
+          "desc": "REPOSIT\u00d3RIO",
+          "task_ids": [
+            "task16",
+            "task14"
+          ]
+        }
+      },
+      "step2": {
+        "Task": {
+          "oid": "step2",
+          "parent_id": "LABASE",
+          "desc": "PENDENTES",
+          "color_id": "1",
+          "task_ids": [
+            "task9",
+            "task7",
+            "task27"
+          ]
+        }
+      },
+      "step3": {
+        "Task": {
+          "oid": "step3",
+          "parent_id": "LABASE",
+          "desc": "PLANEJANDO",
+          "color_id": "2",
+          "task_ids": [
+            "task13"
+          ]
+        }
+      },
+      "step4": {
+        "Task": {
+          "oid": "step4",
+          "parent_id": "LABASE",
+          "desc": "DESPACHO",
+          "color_id": "3",
+          "task_ids": [
+            "task17",
+            "task28"
+          ]
+        }
+      },
+      "step5": {
+        "Task": {
+          "oid": "step5",
+          "parent_id": "LABASE",
+          "desc": "EXECUTANDO",
+          "color_id": "4",
+          "task_ids": [
+            "task20"
+          ]
+        }
+      },
+      "step6": {
+        "Task": {
+          "oid": "step6",
+          "parent_id": "LABASE",
+          "desc": "TERMINADA",
+          "color_id": "5",
+          "task_ids": [
+            "task19"
+          ]
+        }
+      },
+      "task7": {
+        "Task": {
+          "oid": "task7",
+          "parent_id": "step2",
+          "desc": "Kanban Extras",
+          "color_id": "7",
+          "task_ids": [
+            "task8",
+            "task18",
+            "task26",
+            "task30"
+          ],
+          "tags": [
+            [
+              "code",
+              "refactor"
+            ]
+          ]
+        }
+      },
+      "task8": {
+        "Task": {
+          "oid": "task8",
+          "parent_id": "task7",
+          "desc": "How to link detached subtasks",
+          "color_id": "2",
+          "tags": [
+            [
+              "phase",
+              "elaboration"
+            ],
+            [
+              "nature",
+              "engineering"
+            ]
+          ]
+        }
+      },
+      "task9": {
+        "Task": {
+          "oid": "task9",
+          "parent_id": "step2",
+          "desc": "Kanban Frontend",
+          "color_id": "3",
+          "progress": "50",
+          "task_ids": [
+            "task29"
+          ],
+          "tags": [
+            [
+              "scope",
+              "milestone"
+            ],
+            [
+              "value",
+              "_self"
+            ],
+            [
+              "phase",
+              "elaboration"
+            ]
+          ]
+        }
+      },
+      "task10": {
+        "Task": {
+          "oid": "task10",
+          "parent_id": "task16",
+          "desc": "Design free columns",
+          "color_id": "4",
+          "progress": "75",
+          "tags": [
+            [
+              "text",
+              "project"
+            ],
+            [
+              "code",
+              "enhancement"
+            ],
+            [
+              "scope",
+              "milestone"
+            ]
+          ]
+        }
+      },
+      "task11": {
+        "Task": {
+          "oid": "task11",
+          "parent_id": "task16",
+          "desc": "Include Horizontal Line for Heading",
+          "color_id": "4",
+          "progress": "25",
+          "tags": [
+            [
+              "work",
+              "activity"
+            ],
+            [
+              "nature",
+              "science"
+            ]
+          ]
+        }
+      },
+      "task12": {
+        "Task": {
+          "oid": "task12",
+          "parent_id": "task16",
+          "desc": "Switch to Cardboard Mode",
+          "color_id": "5",
+          "progress": "25",
+          "tags": [
+            [
+              "risk",
+              "_self"
+            ],
+            [
+              "nature",
+              "science"
+            ],
+            [
+              "cost",
+              "shilling"
+            ]
+          ]
+        }
+      },
+      "task13": {
+        "Task": {
+          "oid": "task13",
+          "parent_id": "step3",
+          "desc": "Kanban - Epic",
+          "color_id": "4",
+          "progress": "75",
+          "task_ids": [
+            "task22",
+            "task23",
+            "task21",
+            "task24"
+          ],
+          "tags": [
+            [
+              "level",
+              "cloud"
+            ],
+            [
+              "work",
+              "activity"
+            ]
+          ]
+        }
+      },
+      "task14": {
+        "Task": {
+          "oid": "task14",
+          "parent_id": "step1",
+          "desc": "Dynamic design",
+          "color_id": "3",
+          "progress": "75",
+          "task_ids": [
+            "task15"
+          ],
+          "tags": [
+            [
+              "cost",
+              "pound"
+            ],
+            [
+              "level",
+              "crab"
+            ],
+            [
+              "value",
+              "common"
+            ]
+          ]
+        }
+      },
+      "task15": {
+        "Task": {
+          "oid": "task15",
+          "parent_id": "task14",
+          "desc": "Static design",
+          "color_id": "1",
+          "progress": "100",
+          "tags": [
+            [
+              "code",
+              "feature"
+            ]
+          ]
+        }
+      },
+      "task16": {
+        "Task": {
+          "oid": "task16",
+          "parent_id": "step1",
+          "desc": "Cardboard Story Organizer",
+          "task_ids": [
+            "task10",
+            "task11",
+            "task12"
+          ],
+          "tags": [
+            [
+              "text",
+              "project"
+            ]
+          ]
+        }
+      },
+      "task17": {
+        "Task": {
+          "oid": "task17",
+          "parent_id": "step4",
+          "desc": "Kanban Sprinter",
+          "color_id": "3",
+          "task_ids": [
+            "task25"
+          ],
+          "tags": [
+            [
+              "scope",
+              "milestone"
+            ],
+            [
+              "work",
+              "_self"
+            ]
+          ]
+        }
+      },
+      "task18": {
+        "Task": {
+          "oid": "task18",
+          "parent_id": "task7",
+          "desc": "Choose Font Size",
+          "color_id": "4",
+          "tags": [
+            [
+              "text",
+              "_self"
+            ]
+          ]
+        }
+      },
+      "task19": {
+        "Task": {
+          "oid": "task19",
+          "parent_id": "step6",
+          "desc": "Kanban Spike",
+          "color_id": "1",
+          "progress": "100",
+          "tags": [
+            [
+              "text",
+              "tutorial"
+            ]
+          ]
+        }
+      },
+      "task20": {
+        "Task": {
+          "oid": "task20",
+          "parent_id": "step5",
+          "desc": "Kanban tags CRUD",
+          "color_id": "8"
+        }
+      },
+      "task21": {
+        "Task": {
+          "oid": "task21",
+          "parent_id": "task13",
+          "desc": "Manage Menu",
+          "color_id": "1"
+        }
+      },
+      "task22": {
+        "Task": {
+          "oid": "task22",
+          "parent_id": "task13",
+          "desc": "Improve tag formating"
+        }
+      },
+      "task23": {
+        "Task": {
+          "oid": "task23",
+          "parent_id": "task13",
+          "desc": "Fix click on task description",
+          "color_id": "1"
+        }
+      },
+      "task24": {
+        "Task": {
+          "oid": "task24",
+          "parent_id": "task13",
+          "desc": "Improve Board view functions"
+        }
+      },
+      "task25": {
+        "Task": {
+          "oid": "task25",
+          "parent_id": "task17",
+          "desc": "Signal when saving complete",
+          "color_id": "1"
+        }
+      },
+      "task26": {
+        "Task": {
+          "oid": "task26",
+          "parent_id": "task7",
+          "desc": "Restore Task delete",
+          "color_id": "1"
+        }
+      },
+      "task27": {
+        "Task": {
+          "oid": "task27",
+          "parent_id": "step2",
+          "desc": "Kanban Icon CRUD - Epic"
+        }
+      },
+      "task28": {
+        "Task": {
+          "oid": "task28",
+          "parent_id": "step4",
+          "desc": "Add tags via hash in title"
+        }
+      },
+      "task29": {
+        "Task": {
+          "oid": "task29",
+          "parent_id": "task9",
+          "desc": "Smaler task height"
+        }
+      },
+      "task30": {
+        "Task": {
+          "oid": "task30",
+          "parent_id": "task7",
+          "desc": "Dynamic task sizes",
+          "color_id": "2"
+        }
+      }
+    },
+    "board": {
+      "Board": {
+        "oid": "LABASE",
+        "task_ids": [
+          "step1",
+          "step2",
+          "step3",
+          "step4",
+          "step5",
+          "step6"
+        ],
+        "schema_revision": "1.0",
+        "counter": "31",
+        "steps_colors": [
+          "#777777",
+          "#888888",
+          "#999999",
+          "#AAAAAA",
+          "#BBBBBB",
+          "#CCCCCC",
+          "#DDDDDD",
+          "#EEEEEE",
+          "#FFFFFFF"
+        ],
+        "tasks_colors": [
+          "peachpuff",
+          "rosybrown",
+          "lightyellow",
+          "greenyellow",
+          "palegreen",
+          "lightcyan",
+          "aquamarine",
+          "burlywood",
+          "plum",
+          "orchid"
+        ]
+      }
+    }
+  }
+}
