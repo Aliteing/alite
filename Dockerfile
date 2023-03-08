@@ -5,6 +5,7 @@ FROM python:3.12.0a5-alpine3.17
 ADD ./requirements.txt /tmp/requirements.txt
 
 # Install dependencies
+RUN python -m pip install --upgrade pip
 RUN pip install --no-cache-dir -q -r /tmp/requirements.txt
 RUN mkdir -p /var/www/alite
 
@@ -14,10 +15,10 @@ RUN mkdir -p /var/www/alite
 # Add kwarwp files to the image.
 ADD . /var/www/alite
 
-WORKDIR /var/www/alite/server
+WORKDIR /var/www/alite/src/server
 
 # Expose is NOT supported by Heroku
-EXPOSE $PORT
+EXPOSE 8080
 
 # Run the image as a non-root user
 RUN adduser -D myuser
@@ -30,6 +31,6 @@ USER myuser
 # $PORT is set by Heroku
 # CMD gunicorn --bind 0.0.0.0:$PORT wsgi
 # CMD ["gunicorn"  , "-b", "0.0.0.0:8000", "bottle_app:application"]
-CMD python3 -m tornado_main.py
+CMD python3 -m tornado_main
 # Set-up app folder.
 

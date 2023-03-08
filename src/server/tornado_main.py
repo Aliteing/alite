@@ -108,7 +108,15 @@ def make_app_():
     return Application(urls)
 
 
-if __name__ == '__main__':
+def start_server():
+    from tornado.options import define, options
+
+    define("port", default=8080, help="port to listen on")
     app = make_app()
-    app.listen(3000)
+    app.listen(options.port)
+    print(f"listening on port {options.port}")
     IOLoop.instance().start()
+
+
+if __name__ == '__main__':
+    start_server()

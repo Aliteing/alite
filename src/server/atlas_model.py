@@ -27,24 +27,29 @@ Changelog
 
 .. versionadded::    23.03
         spike connect to atlas (07).
+        try connection with local mongo (08).
 
 """
 import pymongo
-import os
-passwd = os.environ['ALITE']
-username = "carlotolla9"
-print("ALITE", passwd)
-db_url = "alitelabase.b1lm6fr.mongodb.net"
-con_string = f"mongodb+srv://{username}:{passwd}@{db_url}/?retryWrites=true&w=majority"
-client = pymongo.MongoClient(con_string)
-mydb = client.alite_kanban
 
-mycol = mydb["tasks"]
-print("did", mycol)
+
+def init(passwd):
+    # passwd = os.environ['ALITE']
+    username = "carlotolla9"
+    print("ALITE", passwd)
+    db_url = "alitelabase.b1lm6fr.mongodb.net"
+    con_string = f"mongodb+srv://{username}:{passwd}@{db_url}/?retryWrites=true&w=majority"
+    client = pymongo.MongoClient(con_string)
+    mydb = client.alite_kanban
+
+    mycol = mydb["tasks"]
+    print("did", mycol)
+    return mycol
 
 
 def populate():
     with open("kbj.json", "r") as fjson:
+        mycol = init(get_pass())
         import json
         '''items = json.load(fjson)["KanbanModel"]["tasks"]
         for task, fields in items.items():
@@ -58,8 +63,9 @@ def populate():
 
 class Persist:
     def __init__(self):
-        _client = pymongo.MongoClient(con_string)
-        self.db = _client.alite_kanban
+        # _client = pymongo.MongoClient(con_string)
+        self.db = init(get_pass())
+        # self.db = _client.alite_kanban
 
     def load_all(self):
         return [task for task in self.db.find()]
@@ -71,10 +77,41 @@ class Persist:
         self.db.bulk_write(operations)
 
 
-if __name__ == '__main__':
-
+def atlas_up():
     # populate()
+    mycol = init(get_pass())
     result = mycol.create_index([('oid', pymongo.ASCENDING)])
     print("index", result)
     for x in mycol.find():  # ({"oid": "step1"}, {"_id": 0}):
         print(x)
+
+
+def get_pass():
+    with open("../../.env", "r") as env:
+        return env.read().split("=")[1].strip('"')
+
+
+def local_up():
+    passwd = get_pass()
+    print(passwd)
+    username = "carlotolla9"
+    # db_url = "mongo"
+    # con_string = f"mongodb://{username}:{passwd}@{db_url}/?retryWrites=true&w=majority"
+    dbs = pymongo.MongoClient(host="0.0.0.0", username=username, password=passwd).list_database_names()
+    print("dbs", dbs)
+
+
+def _local_up():
+    with open("../../.env", "r") as env:
+        passwd = env.read().split("=")[1].strip('"')
+        print(passwd)
+        username = "carlotolla9"
+        db_url = "mongo"
+        con_string = f"mongodb://{username}:{passwd}@{db_url}/?retryWrites=true&w=majority"
+        dbs = pymongo.MongoClient(con_string).list_database_names()
+        print("dbs", dbs)
+
+
+if __name__ == '__main__':
+    # atlas_up()
+    local_up()

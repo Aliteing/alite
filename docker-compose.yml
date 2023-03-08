@@ -1,0 +1,27 @@
+version: '3.1'
+
+volumes:
+  mongo_data:
+
+services:
+  alite:
+    build: .
+    command: python3 -m tornado_main
+    volumes:
+      - ./alite:/alite
+    ports:
+      - "8080:8080"
+    depends_on:
+        - mongo
+
+  # MongoDB as a service
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: "carlotolla9"
+      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_PASS}"
+    volumes:
+        - mongo_data:/data/db
+    ports:
+      - "27017:27017"
