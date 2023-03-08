@@ -28,6 +28,7 @@ Changelog
 .. versionadded::    23.03
         spike connect to atlas (07).
         try connection with local mongo (08).
+        return JSON format for KanbamModel argument (08). up many fail.
 
 """
 import pymongo
@@ -49,16 +50,18 @@ def init(passwd):
 
 def populate():
     with open("kbj.json", "r") as fjson:
-        mycol = init(get_pass())
+        # mycol = init(get_pass())
         import json
         '''items = json.load(fjson)["KanbanModel"]["tasks"]
         for task, fields in items.items():
             print(task, fields["Task"])'''
-        items = json.load(fjson)["KanbanModel"]["tasks"]
-        docs = [fields["Task"] for task, fields in items.items()]
+        items = json.load(fjson)
+        # items = json.load(fjson)["KanbanModel"]["tasks"]
+        docs = [fields for task, fields in items.items()]
         [print(item) for item in docs]
-        res = mycol.insert_many(docs)
-        print(res.inserted_ids)
+        return docs
+        # res = mycol.insert_many(docs)
+        # print(res.inserted_ids)
 
 
 class Persist:
@@ -68,7 +71,10 @@ class Persist:
         # self.db = _client.alite_kanban
 
     def load_all(self):
-        return [task for task in self.db.find()]
+        kind = dict(task="task", step="step", LABA="board")
+        lst = [{k: str(v) for k, v in task.items()} for task in self.db.find()]
+        _dct = {args["oid"] if args["oid"][0] in "st" else "board": args for args in lst if "oid" in args}
+        return _dct
 
     def save_all(self, items):
         from pymongo import UpdateOne
@@ -78,12 +84,22 @@ class Persist:
 
 
 def atlas_up():
+    pst = Persist()
+    dct = pst.load_all()
+
+    [print({dc: dcv}) for dc, dcv in dct.items()]
+
+
+def _atlas_up():
     # populate()
     mycol = init(get_pass())
-    result = mycol.create_index([('oid', pymongo.ASCENDING)])
-    print("index", result)
-    for x in mycol.find():  # ({"oid": "step1"}, {"_id": 0}):
-        print(x)
+    # result = mycol.create_index([('oid', pymongo.ASCENDING)])
+    # print("index", result)
+    dat = {_oid["oid"]: {key: str(value) for key, value in _oid.items()} for _oid in mycol.find()}
+    for key, value in dat.items():  # ({"oid": "step1"}, {"_id": 0}):
+        data = {key: value}
+        # data = {key: str(value) for key, value in x.items()}
+        print(data)
 
 
 def get_pass():
@@ -113,5 +129,6 @@ def _local_up():
 
 
 if __name__ == '__main__':
+    Persist().save_all(populate())
     # atlas_up()
-    local_up()
+    # local_up()

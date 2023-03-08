@@ -38,7 +38,8 @@ Changelog
         moved tag insertion to init demo (02).
         add class Board instead of plain root (02).
         fix KanbanModel to use Board (03).
-        tags management (07).
+        adjust load and save to match mongo JSON (08).
+        TODO tags management (??).
 
 """
 # ----------------------------------------------------------
@@ -137,14 +138,17 @@ class KanbanModel:
             self.tasks = {"board": task}
             # self.tasks = {"root": self.board}
         else:
-            self.board = Board(**(tasks["board"]["Board"]))
+            # self.board = Board(**(tasks["board"]["Board"]))
+            self.board = Board(**(tasks["board"]))
             # self.board = Board(**(tasks["root"]["Board"]))
             # tasks.pop("board")
             # tasks.pop("root")
             # self.tasks = [Task(**(tsk["Task"])) for tsk in tasks if isinstance(tsk, dict)]
-            self.tasks = {tsk_id: Task(**(tsk["Task"])) for tsk_id, tsk in tasks["tasks"].items()
-                          if isinstance(tsk, dict)
-                          and "Task" in tsk} if isinstance(tasks, dict) else {"board": self.board}
+            self.tasks = {tsk_id: Task(**tsk) for tsk_id, tsk in tasks.items() if isinstance(tsk, dict)
+                          and tsk_id != "board"} if isinstance(tasks, dict) else {"board": self.board}
+            # self.tasks = {tsk_id: Task(**(tsk["Task"])) for tsk_id, tsk in tasks["tasks"].items()
+            #               if isinstance(tsk, dict)
+            #               and "Task" in tsk} if isinstance(tasks, dict) else {"board": self.board}
         # print("got tasks ok>>>> ", self.board.task_ids)
         # [print(tsk, a_tsk) for tsk, a_tsk in tasks["tasks"].items()] if isinstance(tasks, dict) else print("no tasks")
 
@@ -198,12 +202,15 @@ class KanbanModel:
         return next_id
 
     def __repr__(self):
-        return json_repr(self)
+        # return json_repr(self)
+        rep = json_repr(self.tasks)
+        rep.update(dict(board=json_repr(self.board)))
+        return rep
 
 
 # ----------------------------------------------------------
 class Task:
-    def __init__(self, oid="", parent_id=None, desc=None, color_id=0, progress=0,
+    def __init__(self, oid="", parent_id=None, desc=None, color_id=0, progress=0, _oid=0,
                  task_ids=(), tags=(), users=(), calendar=(), comments=(), external_links=()):
         self.oid = oid
         self.parent_id = parent_id
@@ -362,7 +369,8 @@ class KanbanView:
     def read(self, *_):
         def on_complete(_req):
             if _req.status == 200 or req.status == 0:
-                self.kanban = KanbanModel(tasks=json.loads(_req.text)["KanbanModel"])
+                self.kanban = KanbanModel(tasks=json.loads(_req.text))
+                # self.kanban = KanbanModel(tasks=json.loads(_req.text)["KanbanModel"])
                 self.draw()
 
                 print("complete ok>>>> ")  # + _req.text)
@@ -685,7 +693,8 @@ def json_repr(o):
         attributes = [
             n for n in o.__dict__ if not n.startswith("__") and not callable(n) and not type(n) is staticmethod]
         # print(o.__class__.__name__, attributes)
-        return {o.__class__.__name__: {k: json_repr(getattr(o, k)) for k in attributes if getattr(o, k)}}
+        return {k: json_repr(getattr(o, k)) for k in attributes if getattr(o, k)}
+        # return {o.__class__.__name__: {k: json_repr(getattr(o, k)) for k in attributes if getattr(o, k)}}
         # for n in attributes:
         #     if not n.startswith("__") and not callable(n) and not type(n) is staticmethod:
         #         repr_key = escape_string(n)

@@ -57,11 +57,12 @@ class Kanban(RequestHandler):
 
     def post(self, *_):
         items = json.loads(self.request.body)
-        Kanban.kanban = {att: val for att, val in items["KanbanModel"].items() if att != "tasks"}
+        Kanban.kanban = {att: val for att, val in items.items() if att != "tasks"}
+        # Kanban.kanban = {att: val for att, val in items["KanbanModel"].items() if att != "tasks"}
         with open("kbj.json", "w") as fjson:
             json.dump(items, fjson)
         # print("kanban post", items)
-        Kanban.tasks = items["KanbanModel"]["tasks"]
+        # Kanban.tasks = items["tasks"]
         self.write({'message': 'whole base saved'})
 
 
