@@ -39,6 +39,7 @@ Changelog
         add class Board instead of plain root (02).
         fix KanbanModel to use Board (03).
         adjust load and save to match mongo JSON (08).
+        add tasks to server and database (09).
         TODO tags management (??).
 
 """
@@ -169,7 +170,7 @@ class KanbanModel:
 
     def add_task(self, parent_id, desc, color_id, progress, prefix="task{}"):
         task_id = self.get_next_id(prefix)
-        task = Task(task_id, 0, desc, color_id, progress, [])
+        task = Task(task_id, 0, desc, color_id, progress)
         # print("task.oid", task.oid, "self.tasks", self.tasks)
         self.tasks[task.oid] = task
 
@@ -210,8 +211,9 @@ class KanbanModel:
 
 # ----------------------------------------------------------
 class Task:
-    def __init__(self, oid="", parent_id=None, desc=None, color_id=0, progress=0, _oid=0,
+    def __init__(self, oid="", parent_id=None, desc=None, color_id=0, progress=0, _id=0,
                  task_ids=(), tags=(), users=(), calendar=(), comments=(), external_links=()):
+        self._id = _id
         self.oid = oid
         self.parent_id = parent_id
         self.desc = desc
@@ -223,6 +225,16 @@ class Task:
         self.calendar = list(calendar)
         self.comments = list(comments)
         self.external_links = list(external_links)
+
+    def upsert(self, tags=(), users=(), calendar=(), comments=(), external_links=()):
+        def to_fro_dict(argument, attribute):
+            _tags = {k: v for k, v in attribute}
+            _tags.update(argument)
+            attribute = list(_tags.items())
+            return attribute
+        pairing = zip([tags, users, calendar, comments, external_links],
+                      [self.tags, self.users, self.calendar, self.comments, self.external_links])
+        _ = [to_fro_dict(argument, attribute) for argument, attribute in pairing]
 
     def add_task(self, task):
         self.task_ids.append(task.oid)
@@ -243,9 +255,11 @@ class Task:
 
 # ----------------------------------------------------------
 class Board(Task):
-    def __init__(self, oid=LABASE, parent_id=None, counter=1, schema_revision=SCHEMA_REVISION,
+    def __init__(self, oid=LABASE, parent_id=None, counter=1, schema_revision=SCHEMA_REVISION, _id=0,
                  steps_colors=STEPS_COLORS, tasks_colors=TASKS_COLORS, task_ids=(), current=None):
         super().__init__(oid=oid, parent_id=parent_id, task_ids=task_ids)
+        self._id = _id
+
         self.schema_revision = schema_revision
         self.counter = int(counter)
         self.steps_colors = list(steps_colors)
@@ -345,9 +359,10 @@ class KanbanView:
         # doc['dump'].bind('click', self.dump)
         # self.init_model() if self.new else None
 
-    def write(self, _):
-        page = "/api/save"
-        txt = json.dumps(repr(self.kanban))
+    def write(self, page="/api/save", item=None, *_):
+        _item = item or self.kanban
+
+        txt = json.dumps(repr(_item))
         # print(txt)
         # data = parse.urlencode(txt).encode()
         data = txt
@@ -369,7 +384,9 @@ class KanbanView:
     def read(self, *_):
         def on_complete(_req):
             if _req.status == 200 or req.status == 0:
-                self.kanban = KanbanModel(tasks=json.loads(_req.text))
+                _rt = json.loads(_req.text)
+                print(_rt)
+                self.kanban = KanbanModel(tasks=_rt)
                 # self.kanban = KanbanModel(tasks=json.loads(_req.text)["KanbanModel"])
                 self.draw()
 
@@ -399,6 +416,7 @@ class KanbanView:
         # self.create_script_tag()
         # step_ids = self.kanban.tasks["board"].task_ids
         step_ids = self.kanban.board.task_ids
+        print(step_ids)
         # step_ids = self.kanban.tasks["board"].task_ids
         width = 100 / len(step_ids)
         board = doc["board"]
@@ -549,6 +567,7 @@ class KanbanView:
         if desc:
             task = self.kanban.add_task(step.oid, desc, 0, 0)
             self.draw_task(task, node)
+            self.write(page=f"/api/item/{task.oid}", item=task)
 
     def remove_task(self, ev, task):
         ev.stopPropagation()
@@ -581,6 +600,7 @@ class KanbanView:
         if ret:
             task.desc = ret
             self.set_text(task)
+            self.write(page=f"/api/item/{task.oid}", item=task)
 
     def load(self, *_):
         kanban = None

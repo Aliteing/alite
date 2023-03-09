@@ -25,7 +25,8 @@
     "desc": "PLANEJANDO",
     "color_id": "2",
     "task_ids": [
-      "task13"
+      "task13",
+      "task33"
     ]
   },
   "step4": {
@@ -35,7 +36,8 @@
     "color_id": "3",
     "task_ids": [
       "task17",
-      "task28"
+      "task28",
+      "task31"
     ]
   },
   "step5": {
@@ -341,7 +343,7 @@
   "task28": {
     "oid": "task28",
     "parent_id": "step4",
-    "desc": "Add tags via hash in title"
+    "desc": "Add tags via hash in title</br>@@link, #tag, &partner,</br>%progress, @date"
   },
   "task29": {
     "oid": "task29",
@@ -354,6 +356,39 @@
     "desc": "Dynamic task sizes",
     "color_id": "2"
   },
+  "task31": {
+    "oid": "task31",
+    "parent_id": "step4",
+    "desc": "Kanban BackEnd #d:f #n:d #c:s #s:e @7d",
+    "color_id": "6",
+    "task_ids": [
+      "task32",
+      "task34",
+      "task35"
+    ]
+  },
+  "task32": {
+    "oid": "task32",
+    "parent_id": "task31",
+    "desc": "Backend Save all #s:p #d:f @2d",
+    "color_id": "3"
+  },
+  "task33": {
+    "oid": "task33",
+    "parent_id": "step3",
+    "desc": "Drag task to board to timing #s:s #d:f #c:s @2d"
+  },
+  "task34": {
+    "oid": "task34",
+    "parent_id": "task31",
+    "desc": "Update/insert task #s:p #c:f @2d",
+    "color_id": "4"
+  },
+  "task35": {
+    "oid": "task35",
+    "parent_id": "task31",
+    "desc": "Backend load all #s:p #d:f @2d"
+  },
   "board": {
     "oid": "LABASE",
     "task_ids": [
@@ -365,7 +400,7 @@
       "step6"
     ],
     "schema_revision": "1.0",
-    "counter": "31",
+    "counter": "36",
     "steps_colors": [
       "#777777",
       "#888888",

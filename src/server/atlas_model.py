@@ -28,10 +28,13 @@ Changelog
 .. versionadded::    23.03
         spike connect to atlas (07).
         try connection with local mongo (08).
-        return JSON format for KanbamModel argument (08). up many fail.
+        return JSON format for KanbanModel argument (08).
+        up many now working (09).
+        TODO - need fix task_ids in populated atlas (09).
 
 """
 import pymongo
+from pymongo import UpdateOne
 
 
 def init(passwd):
@@ -71,15 +74,22 @@ class Persist:
         # self.db = _client.alite_kanban
 
     def load_all(self):
-        kind = dict(task="task", step="step", LABA="board")
+        # kind = dict(task="task", step="step", LABA="board")
         lst = [{k: str(v) for k, v in task.items()} for task in self.db.find()]
         _dct = {args["oid"] if args["oid"][0] in "st" else "board": args for args in lst if "oid" in args}
         return _dct
 
-    def save_all(self, items):
-        from pymongo import UpdateOne
-        ids = [data.pop("_id") for data in items]
-        operations = [UpdateOne({"_id": idn}, {'$set': data}, upsert=True) for idn, data in zip(ids, items)]
+    def upsert(self, items, idx="oid", _idx="oid"):
+        _ = items.pop(_idx) if _idx in items else None
+        ids = items.pop(idx)
+        self.db.update_one({idx: ids}, {'$set': items},  upsert=True)
+
+    def save_all(self, items, idx="oid", _idx="oid"):
+        _ = [data.pop(_idx) for data in items if _idx in items]
+        ids = [data.pop(idx) for data in items]
+        # ids = [data.pop("_id") for data in items]
+        operations = [UpdateOne({idx: idn}, {'$set': data}, upsert=True) for idn, data in zip(ids, items)]
+        # operations = [UpdateOne({"_id": idn}, {'$set': data}, upsert=True) for idn, data in zip(ids, items)]
         self.db.bulk_write(operations)
 
 
@@ -128,7 +138,10 @@ def _local_up():
         print("dbs", dbs)
 
 
+DS = Persist()
+
+
 if __name__ == '__main__':
     Persist().save_all(populate())
-    # atlas_up()
+    atlas_up()
     # local_up()

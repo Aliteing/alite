@@ -34,6 +34,7 @@ import os
 from tornado.web import Application, RequestHandler, StaticFileHandler
 from tornado.ioloop import IOLoop
 import json
+from atlas_model import DS
 
 # kanban = {"": ""}
 
@@ -49,6 +50,10 @@ class Kanban(RequestHandler):
     tasks = {"": ""}
 
     def get(self):
+        self.write(json.dumps(DS.load_all()))
+        # self.write(json.dumps(Kanban.tasks))
+
+    def _(self):
         # self.write({'items': items})
         with open("kbj.json", "r") as fjson:
             items = json.load(fjson)
