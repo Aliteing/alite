@@ -99,14 +99,14 @@ _FACET = dict(
         _self=f"stethoscope  {FC[6]}", step="shoe-prints purple", story="dragon cyan", epic="shield green",
         milestone="bullseye yellow", release="truck red"),
     cost=dict(
-        _self=f"wallet  {FC[7]}", farthing="_one_cent purple", penny="_ten_cent cyan", shilling="_twenty_cent green",
-        crown="_half_euro yellow", pound="_one_euro red"),
+        _self=f"wallet  {FC[7]}", farthing="crow purple", penny="dog cyan", shilling="horse green",
+        crown="crown yellow", pound="chess-king salmon"),
     # cost=dict(
     #     _self=f"wallet  {FC[7]}", farthing="_one_cent purple", penny="coins cyan", shilling="sun green",
     #     crown="crown yellow", pound="money-bill red"),
     risk=dict(
         _self=f"radiation  {FC[8]}", low="circle-radiation purple", moderate="biohazard cyan", medium="fire green",
-        high="bomb yellow", extreme="explosion brightred"),
+        high="bomb yellow", extreme="explosion salmon"),
     value=dict(
         _self=f"heart  {FC[9]}", common="spray-can-sparkles purple", magic="hand-sparkles cyan",
         rare="star-half-stroke green", legendary="star yellow", mythical="wand-sparkles red"),
@@ -359,6 +359,15 @@ class KanbanView:
         # doc['dump'].bind('click', self.dump)
         # self.init_model() if self.new else None
 
+    def parse_desc(self, desc, tsk):
+        def do_mark(arg, mrk):
+            import re
+            _args = re.findall(f" {arg}(\S*)", desc)
+            # print(f"arg {arg}", _args, mrk)
+        mark = "@#%&!"
+        [do_mark(arg, mrk) for arg, mrk in
+         zip(mark, [tsk.calendar, tsk.tags, tsk.progress, tsk.users, tsk.external_links])]
+
     def write(self, page="/api/save", item=None, *_):
         _item = item or self.kanban
 
@@ -385,8 +394,9 @@ class KanbanView:
         def on_complete(_req):
             if _req.status == 200 or req.status == 0:
                 _rt = json.loads(_req.text)
-                print(_rt)
+                # print(_rt)
                 self.kanban = KanbanModel(tasks=_rt)
+                [self.parse_desc(t.desc, t) for t in self.kanban.tasks.values()]
                 # self.kanban = KanbanModel(tasks=json.loads(_req.text)["KanbanModel"])
                 self.draw()
 
@@ -416,7 +426,7 @@ class KanbanView:
         # self.create_script_tag()
         # step_ids = self.kanban.tasks["board"].task_ids
         step_ids = self.kanban.board.task_ids
-        print(step_ids)
+        # print(step_ids)
         # step_ids = self.kanban.tasks["board"].task_ids
         width = 100 / len(step_ids)
         board = doc["board"]
@@ -472,6 +482,15 @@ class KanbanView:
             _ = f_div <= t_ico
             return html.TD(f_div, title=title)
 
+        def do_icon(ico, data):
+            ico = html.TD(html.I(Class=f"fa fa-{ico}"), Class="dropdown")
+            ico_ctn = html.DIV(Class="dropdown-content")
+            data = [":".join(dt) for dt in data] if ico == "tags" else data
+            data = [":".join(dt) for dt in data] if ico == "tags" else data
+            _ = ico <= ico_ctn
+            _ = [ico_ctn <= html.SPAN(datum)+html.BR() for datum in data if "_self" not in datum]
+            return ico
+
         node = html.DIV(Class="task", Id=task.oid, draggable=True)
         node.style.backgroundColor = self.kanban.tasks_colors[task.color_id]
         _ = parent_node <= node
@@ -492,7 +511,9 @@ class KanbanView:
         progress_bar.style.width = percent(task.progress)
         # _ = progress <= progress_bar XXX removed progress!
         icons = "bars external-link tags comment users calendar".split()
-        cmd += [html.TD(html.I(Class=f"fa fa-{ico}"), Class="task_command_delete") for ico in icons]
+        props = [list("abcd"), task.external_links, task.tags, task.comments, task.users, task.calendar]
+        cmd += [do_icon(ico, data) for ico, data in zip(icons, props)]
+        # cmd += [html.TD(html.I(Class=f"fa fa-{ico}"), Class="task_command_delete") for ico in icons]
 
         menu = html.I(Class="fa fa-bars")
         command_delete = html.DIV(menu, Class="task_command_delete")

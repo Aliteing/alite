@@ -27,6 +27,7 @@ Changelog
 .. versionadded::    23.03
         test a rest api with tornado.
         add a fake persistence (03).
+        add css path (14).
 
 """
 import os
@@ -84,6 +85,7 @@ class TodoItem(RequestHandler):
 def make_app():
     current_path = os.path.dirname(__file__)
     static_path = os.path.join(current_path, "..", "kanban")
+    template_path = os.path.join(current_path, "templates")
     image_path = os.path.join(current_path, "image")
     print(static_path)
 
@@ -94,6 +96,7 @@ def make_app():
         (r"/api/item", TodoItem),
         (r"/api/item/([^/]+)?", TodoItem),
         (r"/(.*\.py)", StaticFileHandler,  {'path': static_path}),
+        (r"/(.*\.css)", StaticFileHandler,  {'path': template_path}),
         (r"/image/(.*\.ico)", StaticFileHandler,  {'path': image_path}),
         (r"/image/(.*\.jpg)", StaticFileHandler,  {'path': image_path})
     ]
