@@ -49,11 +49,11 @@ class Kanban(RequestHandler):
     kanban = {"": ""}
     tasks = {"": ""}
 
-    def _get(self):
+    def get(self):
         self.write(json.dumps(DS.load_all()))
         # self.write(json.dumps(Kanban.tasks))
 
-    def get(self):
+    def _get(self):
         # self.write({'items': items})
         with open("kbj.json", "r") as fjson:
             items = json.load(fjson)

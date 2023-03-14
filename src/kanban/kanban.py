@@ -213,7 +213,7 @@ class KanbanModel:
 class Task:
     def __init__(self, oid="", parent_id=None, desc=None, color_id=0, progress=0, _id=0,
                  task_ids=(), tags=(), users=(), calendar=(), comments=(), external_links=()):
-        self._id = _id
+        self._id = str(_id)
         self.oid = oid
         self.parent_id = parent_id
         self.desc = desc
@@ -256,8 +256,8 @@ class Task:
 # ----------------------------------------------------------
 class Board(Task):
     def __init__(self, oid=LABASE, parent_id=None, counter=1, schema_revision=SCHEMA_REVISION, _id=0,
-                 steps_colors=STEPS_COLORS, tasks_colors=TASKS_COLORS, task_ids=(), current=None):
-        super().__init__(oid=oid, parent_id=parent_id, task_ids=task_ids)
+                 steps_colors=STEPS_COLORS, tasks_colors=TASKS_COLORS, task_ids=(), current=None, desc=None):
+        super().__init__(oid=oid, parent_id=parent_id, task_ids=task_ids, desc=desc, _id=_id)
         self._id = _id
 
         self.schema_revision = schema_revision

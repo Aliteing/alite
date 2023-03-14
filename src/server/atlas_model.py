@@ -33,6 +33,8 @@ Changelog
         TODO - need fix task_ids in populated atlas (09).
 
 """
+from pprint import pprint
+
 import pymongo
 from pymongo import UpdateOne
 
@@ -75,9 +77,17 @@ class Persist:
 
     def load_all(self):
         # kind = dict(task="task", step="step", LABA="board")
-        lst = [{k: str(v) for k, v in task.items()} for task in self.db.find()]
+        dbt = self.db.find()
+        # return dbt
+        lst = [{k: v for k, v in task.items()} for task in dbt]
         _dct = {args["oid"] if args["oid"][0] in "st" else "board": args for args in lst if "oid" in args}
         return _dct
+
+    def load_item(self, item_dict):
+        # kind = dict(task="task", step="step", LABA="board")
+        dbt = self.db.find_one(filter=item_dict) if item_dict else self.db.find_one()
+        print("dbt", dbt)
+        return dbt
 
     def upsert(self, items, idx="oid", _idx="oid"):
         _ = items.pop(_idx) if _idx in items else None
@@ -142,6 +152,12 @@ DS = Persist()
 
 
 if __name__ == '__main__':
-    Persist().save_all(populate())
-    atlas_up()
+    # Persist().load_item(None)
+    _dct = DS.load_all()
+    [pprint({_lt: _it}) for _lt, _it in _dct.items()]
+
+    # [pprint(it) for it in DS.db.find()]
+    # Persist().load_item(dict(oid="task11"))
+    # Persist().save_all(populate())
+    # atlas_up()
     # local_up()
