@@ -40,7 +40,7 @@ Changelog
         fix KanbanModel to use Board (03).
         adjust load and save to match mongo JSON (08).
         add tasks to server and database (09).
-        TODO tags management (??).
+        tags and date parsing from cli (16).
 
 """
 # ----------------------------------------------------------
@@ -76,6 +76,7 @@ FACET_COLORS = FC = "darkred darkorange peach gold darkgreen navy" \
 TIME_FMT = "%Y/%m/%d %H:%M:%S"
 
 DIAL = [f"dial-{pos if pos != '_' else ''}" for pos in "off min low med-low med _ high max".split()]
+BATT = [f"battery-{pos if pos != '_' else ''}" for pos in "empty quarter half three-quarters full".split()]
 _FACET = dict(
     level=dict(
         _self=f"gauge {FC[0]}",
@@ -83,8 +84,8 @@ _FACET = dict(
     phase=dict(
         _self=f"timeline  {FC[1]}", inception="brain purple", elaboration="ruler cyan",
         construction="hammer green", review="eye yellow", transition="truck-fast red"),
-    code=dict(
-        _self=f"code  {FC[2]}", spike="road-spikes purple", feature="box cyan", enhancement="ribbon green",
+    develop=dict(
+        _self=f"develop  {FC[2]}", spike="road-spikes purple", feature="box cyan", enhancement="ribbon green",
         refactor="industry orange", bugfix="bug red"),
     text=dict(
         _self=f"book  {FC[3]}", document="pen purple", tutorial="graduation-cap blue", manual="book-open green",
@@ -96,11 +97,11 @@ _FACET = dict(
         _self=f"person  {FC[5]}", planning="pen-ruler purple", activity="person-digging cyan",
         meeting="people-group green", session="users yellow", exam="microscope red"),
     scope=dict(
-        _self=f"stethoscope  {FC[6]}", step="shoe-prints purple", story="dragon cyan", epic="shield green",
-        milestone="bullseye yellow", release="truck red"),
+        _self=f"stethoscope  {FC[6]}", pace="shoe-prints salmon", story="dragon cyan", epic="shield green",
+        milestone="bullseye orange", release="truck yellow"),
     cost=dict(
-        _self=f"wallet  {FC[7]}", farthing="crow purple", penny="dog cyan", shilling="horse green",
-        crown="crown yellow", pound="chess-king salmon"),
+        _self=f"wallet  {FC[7]}", farthing="crow salmon", penny="dog cyan", shilling="horse green",
+        crown="crown orange", pound="chess-king yellow"),
     # cost=dict(
     #     _self=f"wallet  {FC[7]}", farthing="_one_cent purple", penny="coins cyan", shilling="sun green",
     #     crown="crown yellow", pound="money-bill red"),
@@ -108,8 +109,8 @@ _FACET = dict(
         _self=f"radiation  {FC[8]}", low="circle-radiation purple", moderate="biohazard cyan", medium="fire green",
         high="bomb yellow", extreme="explosion salmon"),
     value=dict(
-        _self=f"heart  {FC[9]}", common="spray-can-sparkles purple", magic="hand-sparkles cyan",
-        rare="star-half-stroke green", legendary="star yellow", mythical="wand-sparkles red"),
+        _self=f"heart  {FC[9]}", common="spray-can-sparkles salmon", magic="hand-sparkles cyan",
+        rare="star-half-stroke green", legendary="star orange", mythical="wand-sparkles yellow"),
 )
 # FACET = {fk: {tk: IcoColor(*tv.split()) for tk, tv in fv.items()} for fk, fv in _FACET.items()}
 
@@ -359,14 +360,65 @@ class KanbanView:
         # doc['dump'].bind('click', self.dump)
         # self.init_model() if self.new else None
 
-    def parse_desc(self, desc, tsk):
+    @staticmethod
+    def parse_desc(desc, tsk):
+        import datetime
+        import re
+        now = datetime.datetime.now()
+        dtd = datetime.timedelta
+        dd, ww, hh = lambda dt: dtd(days=dt), lambda dt: dtd(weeks=dt), lambda dt: dtd(hours=dt)
+
+        def insert_unique(argument, key, value):
+            as_dict = dict(argument)
+            as_dict.update([(key, value)])
+            return list(as_dict.items())
+
+        def do_at(txt):
+            txt, time_lapse = int(txt[:-1]), txt[-1].lower()
+            at_parse = dict(d=lambda t=txt: now+dd(t), w=lambda t=txt: now+dd(t), h=lambda t=txt: now+dd(t),)
+            tsk.calendar = insert_unique(tsk.calendar, "due", at_parse[time_lapse]())
+
+        def do_hash(txt):
+            key, value = txt.split(":")
+            _key = {facet[0]: facet for facet in _FACET}[key]
+            value = {facet[0]: facet for facet in _FACET[_key]}[value]
+            tsk.tags = insert_unique(tsk.tags, _key, value)
+
+        def do_pct(txt):
+            tsk.progress = int(txt)
+
+        def do_amp(txt):
+            tsk.users = insert_unique(tsk.users, txt, 0)
+
+        def do_exc(txt):
+            tsk.external_links = insert_unique(tsk.external_links, txt, 0)
+
         def do_mark(arg, mrk):
-            import re
             _args = re.findall(f" {arg}(\S*)", desc)
+            try:
+                [mrk(ag) for ag in _args]
+            except ValueError as err:
+                print("errValueError", err)
+                pass
+            except KeyError as err:
+                print("errKeyError", err)
+                pass
+            except AttributeError as err:
+                print("errAttributeError", err)
+                pass
+            except IndexError as err:
+                print("errIndexError", err)
+                pass
             # print(f"arg {arg}", _args, mrk)
+            return _args
         mark = "@#%&!"
-        [do_mark(arg, mrk) for arg, mrk in
-         zip(mark, [tsk.calendar, tsk.tags, tsk.progress, tsk.users, tsk.external_links])]
+        _ = [do_mark(arg, mrk) for arg, mrk in zip(mark, [do_at, do_hash, do_pct, do_amp, do_exc])]
+        rex = f" [{mark}]\S*"
+        desc_sub = re.sub(rex, "", desc)
+        # desc = re.sub(f" {mark}\S*", "", desc)
+
+        tsk.desc = desc_sub
+        # zip(mark, [tsk.calendar, tsk.tags, tsk.progress, tsk.users, tsk.external_links])]
 
     def write(self, page="/api/save", item=None, *_):
         _item = item or self.kanban
@@ -483,13 +535,13 @@ class KanbanView:
             return html.TD(f_div, title=title)
 
         def do_icon(ico, data):
-            ico = html.TD(html.I(Class=f"fa fa-{ico}"), Class="dropdown")
+            _ico = html.TD(html.I(Class=f"fa fa-{ico}"), Class="dropdown")
             ico_ctn = html.DIV(Class="dropdown-content")
-            data = [":".join(dt) for dt in data] if ico == "tags" else data
-            data = [":".join(dt) for dt in data] if ico == "tags" else data
-            _ = ico <= ico_ctn
-            _ = [ico_ctn <= html.SPAN(datum)+html.BR() for datum in data if "_self" not in datum]
-            return ico
+            _data = [":".join([dt[0], dt[1].strftime("%c")[4: -14]]) for dt in data] if ico == "calendar" else data
+            data = [":".join(dt) for dt in data] if ico == "tags" else _data
+            _ = _ico <= ico_ctn
+            _ = [ico_ctn <= html.SPAN(str(datum))+html.BR() for datum in data if "_self" not in datum]
+            return _ico if data else None
 
         node = html.DIV(Class="task", Id=task.oid, draggable=True)
         node.style.backgroundColor = self.kanban.tasks_colors[task.color_id]
@@ -497,7 +549,9 @@ class KanbanView:
         facet = {key: IcoColor(key, *(value["_self"].split()))for key, value in _FACET.items()}
         facets = {fk: {tk: IcoColor(tk, *tv.split()) for tk, tv in fv.items() if tk != "_self"}
                   for fk, fv in _FACET.items()}
-        cmd = [do_tag(facet[_facet], facets[_facet][_tag]) for _facet, _tag in task.tags if _tag != "_self"]
+        cmd = [do_tag(facet[_facet if _facet != "code" else "develop"],
+                      facets[_facet if _facet != "code" else "develop"][_tag])
+               for _facet, _tag in task.tags if _tag != "_self"]
         # cmd = [do_tag(facet[_facet], _tag) for _facet, _tags in sample(list(facets.items()), randint(1, 6))
         #        for _tag in sample(list(_tags.values()), 1)]
 
@@ -510,8 +564,8 @@ class KanbanView:
         progress_bar = html.DIV(Class="task_progress_bar")
         progress_bar.style.width = percent(task.progress)
         # _ = progress <= progress_bar XXX removed progress!
-        icons = "bars external-link tags comment users calendar".split()
-        props = [list("abcd"), task.external_links, task.tags, task.comments, task.users, task.calendar]
+        icons = "external-link tags comment users calendar bars".split()
+        props = [task.external_links, task.tags, task.comments, task.users, task.calendar, list("abcd")]
         cmd += [do_icon(ico, data) for ico, data in zip(icons, props)]
         # cmd += [html.TD(html.I(Class=f"fa fa-{ico}"), Class="task_command_delete") for ico in icons]
 
@@ -521,7 +575,7 @@ class KanbanView:
         # html.TD(progress, Class="task_command") +
         #     cmd[0] + cmd[1] + cmd[2] + cmd[3] + cmd[4] + cmd[5] + cmd[7] + cmd[8] + cmd[2] + cmd[3] + cmd[4] + cmd[5]
         # )
-        _ = [icons <= cm for cm in cmd]
+        _ = [icons <= cm for cm in cmd if cm]
         command = html.TABLE(icons, Class="task_command")
         #  +
 
@@ -587,8 +641,9 @@ class KanbanView:
         desc = prompt("New task", f"{step.desc} {t}")
         if desc:
             task = self.kanban.add_task(step.oid, desc, 0, 0)
+            self.parse_desc(desc, task)
             self.draw_task(task, node)
-            self.write(page=f"/api/item/{task.oid}", item=task)
+            # self.write(page=f"/api/item/{task.oid}", item=task)
 
     def remove_task(self, ev, task):
         ev.stopPropagation()
