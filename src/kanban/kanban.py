@@ -41,6 +41,8 @@ Changelog
         adjust load and save to match mongo JSON (08).
         add tasks to server and database (09).
         tags and date parsing from cli (16).
+        datetime to and fro str for JSON comply (22).
+        popup dialog for tags edit, just demo (22).
 
 """
 # ----------------------------------------------------------
@@ -86,12 +88,12 @@ _FACET = dict(
         construction="hammer green", review="eye yellow", transition="truck-fast red"),
     develop=dict(
         _self=f"develop  {FC[2]}", spike="road-spikes purple", feature="box cyan", enhancement="ribbon green",
-        refactor="industry orange", bugfix="bug red"),
+        refactor="industry blue", bugfix="bug red"),
     text=dict(
         _self=f"book  {FC[3]}", document="pen purple", tutorial="graduation-cap blue", manual="book-open green",
         report="book-open-reader orange", project="list-check red"),
     nature=dict(
-        _self=f"book  {FC[4]}", development="building magenta", data="database cyan", engineering="gears Chartreuse",
+        _self=f"book  {FC[4]}", development="building magenta", info="database cyan", engineering="gears Chartreuse",
         research="book-atlas yellow", science="vial red"),
     work=dict(
         _self=f"person  {FC[5]}", planning="pen-ruler purple", activity="person-digging cyan",
@@ -375,7 +377,8 @@ class KanbanView:
 
         def do_at(txt):
             txt, time_lapse = int(txt[:-1]), txt[-1].lower()
-            at_parse = dict(d=lambda t=txt: now+dd(t), w=lambda t=txt: now+dd(t), h=lambda t=txt: now+dd(t),)
+            at_parse = dict(
+                d=lambda t=txt: str(now+dd(t)), w=lambda t=txt: str(now+ww(t)), h=lambda t=txt: str(now+hh(t)))
             tsk.calendar = insert_unique(tsk.calendar, "due", at_parse[time_lapse]())
 
         def do_hash(txt):
@@ -430,7 +433,7 @@ class KanbanView:
 
         def on_complete(_req):
             if _req.status == 200 or req.status == 0:
-                print("complete ok>>>> ")
+                print("complete ok>>>> " + _req.text)
             else:
                 print("error detected>>>> " + _req.text)
 
@@ -516,9 +519,18 @@ class KanbanView:
     def draw_tasks(self, parent_task, parent_node):
         for task_id in parent_task.task_ids:
             task = self.kanban.tasks[task_id]
-            self.draw_task(task, parent_node)
+            self.upsert_task(task, parent_node)
 
-    def draw_task(self, task, parent_node):
+    def upsert_task(self, task, parent_node):
+        node = html.DIV(Class="task", Id=task.oid, draggable=True)
+        _ = parent_node <= node
+        self.draw_task(task)
+        node.bind('dragstart', ev_callback(self.drag_start, task))
+        node.bind('dragover', self.drag_over)
+        node.bind('drop', ev_callback(self.drag_drop, task))
+        node.bind('click', ev_callback(self.change_task_color, task, node))
+
+    def draw_task(self, task):
         def do_tag(facet_, tag):
             f_div = html.DIV(Class="task_icon", style={"background-color": facet_.color})
             # f_ico = html.I(Class=f"fa fa-{facet_.icon}")
@@ -537,70 +549,68 @@ class KanbanView:
         def do_icon(ico, data):
             _ico = html.TD(html.I(Class=f"fa fa-{ico}"), Class="dropdown")
             ico_ctn = html.DIV(Class="dropdown-content")
-            _data = [":".join([dt[0], dt[1].strftime("%c")[4: -14]]) for dt in data] if ico == "calendar" else data
+            # data = [":".join([dt[0], fi(dt[1]).strftime("%c")[4: -14]]) for dt in data] if ico == "calendar" else data
+            _data = [":".join([dt[0], dt[1][5: -13]]) for dt in data] if ico == "calendar" else data
             data = [":".join(dt) for dt in data] if ico == "tags" else _data
             _ = _ico <= ico_ctn
             _ = [ico_ctn <= html.SPAN(str(datum))+html.BR() for datum in data if "_self" not in datum]
             return _ico if data else None
-
-        node = html.DIV(Class="task", Id=task.oid, draggable=True)
+        node = doc[task.oid]
+        node.html = ""
         node.style.backgroundColor = self.kanban.tasks_colors[task.color_id]
-        _ = parent_node <= node
         facet = {key: IcoColor(key, *(value["_self"].split()))for key, value in _FACET.items()}
         facets = {fk: {tk: IcoColor(tk, *tv.split()) for tk, tv in fv.items() if tk != "_self"}
                   for fk, fv in _FACET.items()}
+        # has to fix old version of facet that was code and now is 'develop'
         cmd = [do_tag(facet[_facet if _facet != "code" else "develop"],
-                      facets[_facet if _facet != "code" else "develop"][_tag])
+                      facets[_facet if _facet != "code" else "develop"][_tag if _tag != "data" else "info"])
                for _facet, _tag in task.tags if _tag != "_self"]
+        #  XXX - must remove these old versions - XXX
         # cmd = [do_tag(facet[_facet], _tag) for _facet, _tags in sample(list(facets.items()), randint(1, 6))
         #        for _tag in sample(list(_tags.values()), 1)]
 
-        progress = html.DIV(Class="task_progress")
-
-        progress_text = html.P("%d%%" % task.progress,
-                               Class="task_progress_text")
-        # _ = progress <= progress_text
-
-        progress_bar = html.DIV(Class="task_progress_bar")
-        progress_bar.style.width = percent(task.progress)
+        # progress = html.DIV(Class="task_progress")
+        #
+        # progress_text = html.P("%d%%" % task.progress,
+        #                        Class="task_progress_text")
+        # # _ = progress <= progress_text
+        #
+        # progress_bar = html.DIV(Class="task_progress_bar")
+        # progress_bar.style.width = percent(task.progress)
         # _ = progress <= progress_bar XXX removed progress!
         icons = "external-link tags comment users calendar bars".split()
         props = [task.external_links, task.tags, task.comments, task.users, task.calendar, list("abcd")]
         cmd += [do_icon(ico, data) for ico, data in zip(icons, props)]
+        cmd[-1].bind("click", lambda *_: TagView(task))
         # cmd += [html.TD(html.I(Class=f"fa fa-{ico}"), Class="task_command_delete") for ico in icons]
 
-        menu = html.I(Class="fa fa-bars")
-        command_delete = html.DIV(menu, Class="task_command_delete")
+        # menu = html.I(Class="fa fa-bars")
+        # command_delete = html.DIV(menu, Class="task_command_delete")
         icons = html.TR()
         # html.TD(progress, Class="task_command") +
         #     cmd[0] + cmd[1] + cmd[2] + cmd[3] + cmd[4] + cmd[5] + cmd[7] + cmd[8] + cmd[2] + cmd[3] + cmd[4] + cmd[5]
         # )
         _ = [icons <= cm for cm in cmd if cm]
-        command = html.TABLE(icons, Class="task_command")
+        # _ = node <= command
+        desc = html.P(Id=f"desc {task.oid}", Class="task_desc")
+        desc.html = task.desc
+        _ = node <= html.TABLE(icons, Class="task_command")
+        _ = node <= desc
+        desc.bind('click', ev_callback(self.edit_task, task))
+        self.draw_tasks(task, node)
+
+        return
         #  +
 
         # html.TD(command_delete)), Class="task_command")
-        _ = node <= command
 
-        desc = html.P(Id=f"desc {task.oid}", Class="task_desc")
-        desc.html = task.desc
-        _ = node <= desc
+        #  XXX - must remove these old versions - XXX
+        # progress.progress_bar = progress_bar
+        # progress.progress_text = progress_text
+        # progress.bind('click',
+        #               ev_callback(self.make_task_progress, task, progress))
 
-        node.bind('dragstart', ev_callback(self.drag_start, task))
-        node.bind('dragover', self.drag_over)
-        node.bind('drop', ev_callback(self.drag_drop, task))
-        node.bind('click', ev_callback(self.change_task_color, task, node))
-
-        progress.progress_bar = progress_bar
-        progress.progress_text = progress_text
-        progress.bind('click',
-                      ev_callback(self.make_task_progress, task, progress))
-
-        command_delete.bind('click', ev_callback(self.remove_task, task))
-
-        desc.bind('click', ev_callback(self.edit_task, task))
-
-        self.draw_tasks(task, node)
+        # command_delete.bind('click', ev_callback(self.remove_task, task))
 
     def set_text(self, task):
         _ = self
@@ -634,7 +644,7 @@ class KanbanView:
         _ = dst_task_node <= src_task_node
         self.kanban.move_task(src_task_id, dst_task_id)
 
-    def add_task(self, ev, step, node):
+    def add_task(self, ev, step, _):
         ev.stopPropagation()
 
         t = time.strftime(TIME_FMT)
@@ -642,7 +652,7 @@ class KanbanView:
         if desc:
             task = self.kanban.add_task(step.oid, desc, 0, 0)
             self.parse_desc(desc, task)
-            self.draw_task(task, node)
+            self.draw_task(task)
             # self.write(page=f"/api/item/{task.oid}", item=task)
 
     def remove_task(self, ev, task):
@@ -675,7 +685,9 @@ class KanbanView:
         ret = prompt("Task", task.desc)
         if ret:
             task.desc = ret
+            self.parse_desc(ret, task)
             self.set_text(task)
+            self.draw_task(task)
             self.write(page=f"/api/item/{task.oid}", item=task)
 
     def load(self, *_):
@@ -718,6 +730,36 @@ class KanbanView:
         # code = json.dumps(self.kanban, default=json_repr)
         code = json.dumps(repr(self.kanban))
         alert(code)
+
+
+class TagView:
+    def __init__(self, task):
+        from browser.widgets.dialog import Dialog
+        style = dict(width="1100px", paddingRight="1em")
+        self.dialog = d = Dialog(f"Facets : {task.desc}", style=style, ok_cancel=True)
+        style = dict(paddingBottom="1em", display="flex")
+        sty = dict(display="inline-block", width="10%")  # , maxWidth="110px")
+
+        dp = html.DIV(style=style)
+        _ = d.panel <= dp
+
+        def rl(tag, icon, name):
+            _tag = IcoColor(name, *(icon.split()))
+            return html.INPUT(
+                type="radio", ID=tag, name=name)+html.LABEL(
+                html.I(Class=f"fa fa-{_tag.icon}", style=dict(color=_tag.color), title=tag) +
+                tag[:2] if tag != "_self" else "none", For=tag)
+
+        def fl(tag):
+            return html.FIELDSET(ID=tag)
+        ffs = {facet: fl(tag=facet) for facet in _FACET}
+
+        def f_div(child, color):
+            color = color["_self"].split()[1]
+            return html.DIV(child, Class="task_icon", style={"background-color": color})
+        _ = [[ffs[fs] <= f_div(rl(tag, icon, fs), tags)
+              for tag, icon in tags.items()] for fs, tags in _FACET.items()]
+        _ = [dp <= html.DIV(_fs, style=sty) for _fs in ffs.values()]
 
 
 # ----------------------------------------------------------

@@ -31,6 +31,7 @@ Changelog
         return JSON format for KanbanModel argument (08).
         up many now working (09).
         fix task_ids and _id in populated atlas (14).
+        fix Persist upsert argument _idx="_id" (22).
 
 """
 from pprint import pprint
@@ -102,7 +103,7 @@ class Persist:
         print("dbt", dbt)
         return dbt
 
-    def upsert(self, items, idx="oid", _idx="oid"):
+    def upsert(self, items, idx="oid", _idx="_id"):
         _ = items.pop(_idx) if _idx in items else None
         ids = items.pop(idx)
         self.db.update_one({idx: ids}, {'$set': items},  upsert=True)

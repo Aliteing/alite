@@ -28,6 +28,7 @@ Changelog
         test a rest api with tornado.
         add a fake persistence (03).
         add css path (14).
+        change TodoItem to KanbanItem and activate DS (22).
 
 """
 import os
@@ -72,13 +73,16 @@ class Kanban(RequestHandler):
         self.write({'message': 'whole base saved'})
 
 
-class TodoItem(RequestHandler):
-    def post(self, id):
-        Kanban.tasks[id] = json.loads(self.request.body)
-        self.write({'message': 'new item added'})
+class KanbanItem(RequestHandler):
+    def post(self, oid):
+        item = json.loads(self.request.body)
+        Kanban.tasks[oid] = item
+        # print("TodoItem item", item)
+        DS.upsert(item)
+        self.write({"message": f"new item {str(oid)} added or updated"})
 
-    def delete(self, id):
-        Kanban.tasks.pop(id) if id in Kanban.tasks else None
+    def delete(self, oid):
+        Kanban.tasks.pop(oid) if id in Kanban.tasks else None
         self.write({'message': 'Item with id %s was deleted' % id})
 
 
@@ -93,8 +97,8 @@ def make_app():
         ("/", MainPage),
         ("/api/load", Kanban),
         ("/api/save", Kanban),
-        (r"/api/item", TodoItem),
-        (r"/api/item/([^/]+)?", TodoItem),
+        (r"/api/item", KanbanItem),
+        (r"/api/item/([^/]+)?", KanbanItem),
         (r"/(.*\.py)", StaticFileHandler,  {'path': static_path}),
         (r"/(.*\.css)", StaticFileHandler,  {'path': template_path}),
         (r"/image/(.*\.ico)", StaticFileHandler,  {'path': image_path}),
@@ -105,16 +109,6 @@ def make_app():
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
         static_path=static_path
                        )
-
-
-class HelloHandler(RequestHandler):
-    def get(self):
-        self.write({'message': 'hello world'})
-
-
-def make_app_():
-    urls = [("/", HelloHandler)]
-    return Application(urls)
 
 
 def start_server():
