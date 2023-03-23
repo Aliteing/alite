@@ -43,12 +43,13 @@ Changelog
         tags and date parsing from cli (16).
         datetime to and fro str for JSON comply (22).
         popup dialog for tags edit, just demo (22).
+        retrieve and print new values from popup (23).
 
 """
 # ----------------------------------------------------------
 import time
 from browser import document as doc
-from browser import confirm, prompt, alert, svg, window, ajax
+from browser import confirm, prompt, alert, svg, window, ajax, bind
 from browser.local_storage import storage
 import browser.html as html
 from collections import namedtuple
@@ -72,8 +73,11 @@ _TASKS_COLORS = [
 TASKS_COLORS = tuple("peachpuff rosybrown lightyellow greenyellow palegreen"
                      " lightcyan aquamarine burlywood plum orchid".split())
 
-FACET_COLORS = FC = "darkred darkorange peach gold darkgreen navy" \
+FACET_COLOR_ = F_ = "darkred darkorange peach gold darkgreen navy" \
                " indigo purple deeppink brown".split()
+
+FACET_COLORS = FC = "tomato plum violet lightsteelblue cornflowerblue paleturquoise" \
+               " palegreen darkkhaki coral sandybrown".split()
 
 TIME_FMT = "%Y/%m/%d %H:%M:%S"
 
@@ -82,7 +86,7 @@ BATT = [f"battery-{pos if pos != '_' else ''}" for pos in "empty quarter half th
 _FACET = dict(
     level=dict(
         _self=f"gauge {FC[0]}",
-        cloud="cloud ivory", kite="dove cyan", ship="ship cyan", fish="fish navy", crab="shrimp slate"),
+        cloud="cloud ivory", kite="dove cyan", ship="ship green", fish="fish navy", crab="shrimp red"),
     phase=dict(
         _self=f"timeline  {FC[1]}", inception="brain purple", elaboration="ruler cyan",
         construction="hammer green", review="eye yellow", transition="truck-fast red"),
@@ -103,15 +107,15 @@ _FACET = dict(
         milestone="bullseye orange", release="truck yellow"),
     cost=dict(
         _self=f"wallet  {FC[7]}", farthing="crow salmon", penny="dog cyan", shilling="horse green",
-        crown="crown orange", pound="chess-king yellow"),
+        crown="crown orange", libra="chess-king yellow"),
     # cost=dict(
     #     _self=f"wallet  {FC[7]}", farthing="_one_cent purple", penny="coins cyan", shilling="sun green",
     #     crown="crown yellow", pound="money-bill red"),
     risk=dict(
-        _self=f"radiation  {FC[8]}", low="circle-radiation purple", moderate="biohazard cyan", medium="fire green",
+        _self=f"radiation  {FC[8]}", low="circle-radiation purple", ordinary="biohazard cyan", medium="fire green",
         high="bomb yellow", extreme="explosion salmon"),
     value=dict(
-        _self=f"heart  {FC[9]}", common="spray-can-sparkles salmon", magic="hand-sparkles cyan",
+        _self=f"heart  {FC[9]}", common="spray-can-sparkles salmon", unusual="hand-sparkles cyan",
         rare="star-half-stroke green", legendary="star orange", mythical="wand-sparkles yellow"),
 )
 # FACET = {fk: {tk: IcoColor(*tv.split()) for tk, tv in fv.items()} for fk, fv in _FACET.items()}
@@ -199,6 +203,7 @@ class KanbanModel:
 
         dst_task = self.tasks[dst_task_id]
         dst_task.add_task(task)
+        return task, dst_task
 
     def get_next_id(self, prefix):
         next_id = prefix.format(self.board.counter)
@@ -448,11 +453,15 @@ class KanbanView:
     def read(self, *_):
         def on_complete(_req):
             if _req.status == 200 or req.status == 0:
-                _rt = json.loads(_req.text)
+                text = _req.text.replace("pound", "libra")
+                _rt = json.loads(text)
                 # print(_rt)
                 self.kanban = KanbanModel(tasks=_rt)
                 [self.parse_desc(t.desc, t) for t in self.kanban.tasks.values()]
                 # self.kanban = KanbanModel(tasks=json.loads(_req.text)["KanbanModel"])
+                # task20 = self.kanban.tasks["task20"]
+                # print(str(task20))
+                # task20.task_ids.append("task36")
                 self.draw()
 
                 print("complete ok>>>> ")  # + _req.text)
@@ -581,7 +590,7 @@ class KanbanView:
         icons = "external-link tags comment users calendar bars".split()
         props = [task.external_links, task.tags, task.comments, task.users, task.calendar, list("abcd")]
         cmd += [do_icon(ico, data) for ico, data in zip(icons, props)]
-        cmd[-1].bind("click", lambda *_: TagView(task))
+        cmd[-1].bind("click", lambda *_: TagView(task).draw())
         # cmd += [html.TD(html.I(Class=f"fa fa-{ico}"), Class="task_command_delete") for ico in icons]
 
         # menu = html.I(Class="fa fa-bars")
@@ -642,9 +651,12 @@ class KanbanView:
         dst_task_node = doc[dst_task_id]
 
         _ = dst_task_node <= src_task_node
-        self.kanban.move_task(src_task_id, dst_task_id)
+        task, dst_task = self.kanban.move_task(src_task_id, dst_task_id)
 
-    def add_task(self, ev, step, _):
+        self.write(page=f"/api/item/{task.oid}", item=task)
+        self.write(page=f"/api/item/{dst_task.oid}", item=dst_task)
+
+    def add_task(self, ev, step, node):
         ev.stopPropagation()
 
         t = time.strftime(TIME_FMT)
@@ -652,8 +664,8 @@ class KanbanView:
         if desc:
             task = self.kanban.add_task(step.oid, desc, 0, 0)
             self.parse_desc(desc, task)
-            self.draw_task(task)
-            # self.write(page=f"/api/item/{task.oid}", item=task)
+            self.upsert_task(task, node)
+            self.write(page=f"/api/item/{task.oid}", item=task)
 
     def remove_task(self, ev, task):
         ev.stopPropagation()
@@ -734,32 +746,49 @@ class KanbanView:
 
 class TagView:
     def __init__(self, task):
+        self.dialog = None
+        self.task = task
+
+    def edit(self, _):
+        d = self.dialog
+        radios = [(fs, doc[rd].value) for fs, tags in _FACET.items() for rd in tags if doc[rd].checked]
+        print(radios)
+        d.close()
+
+    def draw(self):
+        task = self.task
         from browser.widgets.dialog import Dialog
+        facet = {fct[0]: fct[1] for fct in task.tags}
         style = dict(width="1100px", paddingRight="1em")
         self.dialog = d = Dialog(f"Facets : {task.desc}", style=style, ok_cancel=True)
+        d.ok_button.bind("click", self.edit)
         style = dict(paddingBottom="1em", display="flex")
-        sty = dict(display="inline-block", width="10%")  # , maxWidth="110px")
 
         dp = html.DIV(style=style)
         _ = d.panel <= dp
 
+        def lb_for(tag, icon, color, title):
+            return html.LABEL(
+                html.I(Class=f"fa fa-{icon}", style=dict(color=color), title=title) + title[:2], For=tag)
+
         def rl(tag, icon, name):
             _tag = IcoColor(name, *(icon.split()))
-            return html.INPUT(
-                type="radio", ID=tag, name=name)+html.LABEL(
-                html.I(Class=f"fa fa-{_tag.icon}", style=dict(color=_tag.color), title=tag) +
-                tag[:2] if tag != "_self" else "none", For=tag)
+            return (
+                (html.INPUT(type="radio", ID=tag, name=name, value=tag, checked="checked") if (
+                    name in facet and tag == facet[name]) else html.INPUT(type="radio", ID=tag, name=name, value=tag)) +
+                (lb_for(tag, _tag.icon, _tag.color, tag) if tag != "_self" else lb_for(tag, "ban", "magenta", "none")))
 
         def fl(tag):
             return html.FIELDSET(ID=tag)
-        ffs = {facet: fl(tag=facet) for facet in _FACET}
+        ffs = {facet: IcoColor(facet, fl(tag=facet), tags["_self"].split()[1]) for facet, tags in _FACET.items()}
 
-        def f_div(child, color):
-            color = color["_self"].split()[1]
-            return html.DIV(child, Class="task_icon", style={"background-color": color})
-        _ = [[ffs[fs] <= f_div(rl(tag, icon, fs), tags)
+        def tag_div(child, _):
+            return html.DIV(child, Class="task_icon", style={"background-color": "slategray"})
+        _ = [[ffs[fs].icon <= tag_div(rl(tag, icon, fs), tags)
               for tag, icon in tags.items()] for fs, tags in _FACET.items()]
-        _ = [dp <= html.DIV(_fs, style=sty) for _fs in ffs.values()]
+        _ = [dp <= html.DIV(_fs.name + _fs.icon,
+                            style=dict(display="inline-block", width="10%", backgroundColor=_fs.color))
+             for _fs in ffs.values()]
 
 
 # ----------------------------------------------------------
