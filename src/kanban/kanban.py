@@ -44,6 +44,8 @@ Changelog
         datetime to and fro str for JSON comply (22).
         popup dialog for tags edit, just demo (22).
         retrieve and print new values from popup (23).
+        fix move sending task origin and destination to db (27).
+        menu names and move tag dialog to tags entry (27).
 
 """
 # ----------------------------------------------------------
@@ -203,7 +205,7 @@ class KanbanModel:
 
         dst_task = self.tasks[dst_task_id]
         dst_task.add_task(task)
-        return task, dst_task
+        return task, parent_task, dst_task
 
     def get_next_id(self, prefix):
         next_id = prefix.format(self.board.counter)
@@ -423,7 +425,6 @@ class KanbanView:
         _ = [do_mark(arg, mrk) for arg, mrk in zip(mark, [do_at, do_hash, do_pct, do_amp, do_exc])]
         rex = f" [{mark}]\S*"
         desc_sub = re.sub(rex, "", desc)
-        # desc = re.sub(f" {mark}\S*", "", desc)
 
         tsk.desc = desc_sub
         # zip(mark, [tsk.calendar, tsk.tags, tsk.progress, tsk.users, tsk.external_links])]
@@ -560,9 +561,13 @@ class KanbanView:
             ico_ctn = html.DIV(Class="dropdown-content")
             # data = [":".join([dt[0], fi(dt[1]).strftime("%c")[4: -14]]) for dt in data] if ico == "calendar" else data
             _data = [":".join([dt[0], dt[1][5: -13]]) for dt in data] if ico == "calendar" else data
-            data = [":".join(dt) for dt in data] if ico == "tags" else _data
+            _data = [":".join(dt) for dt in data] if ico == "tags" else _data
             _ = _ico <= ico_ctn
-            _ = [ico_ctn <= html.SPAN(str(datum))+html.BR() for datum in data if "_self" not in datum]
+            spans = [html.DIV(html.SPAN(str(datum))+html.BR()) for datum in _data if "_self" not in datum]
+            if "links" in data:
+                _ = [spn.bind("click", lambda *_: alert("not implemented")) for ix, spn in enumerate(spans) if ix != 1]
+                spans[1].bind("click", lambda *_: TagView(task, self).draw())
+            _ = [ico_ctn <= span for span in spans]
             return _ico if data else None
         node = doc[task.oid]
         node.html = ""
@@ -588,9 +593,10 @@ class KanbanView:
         # progress_bar.style.width = percent(task.progress)
         # _ = progress <= progress_bar XXX removed progress!
         icons = "external-link tags comment users calendar bars".split()
-        props = [task.external_links, task.tags, task.comments, task.users, task.calendar, list("abcd")]
+        menu = "links tags comment users coments progress calendar".split() + [task.oid]
+        props = [task.external_links, task.tags, task.comments, task.users, task.calendar, menu]
         cmd += [do_icon(ico, data) for ico, data in zip(icons, props)]
-        cmd[-1].bind("click", lambda *_: TagView(task).draw())
+        # cmd[-1].bind("click", lambda *_: TagView(task, self).draw())
         # cmd += [html.TD(html.I(Class=f"fa fa-{ico}"), Class="task_command_delete") for ico in icons]
 
         # menu = html.I(Class="fa fa-bars")
@@ -651,10 +657,12 @@ class KanbanView:
         dst_task_node = doc[dst_task_id]
 
         _ = dst_task_node <= src_task_node
-        task, dst_task = self.kanban.move_task(src_task_id, dst_task_id)
+        task, orig_task, dst_task = self.kanban.move_task(src_task_id, dst_task_id)
+        # [print(str(tsk)) for tsk in (task, orig_task, dst_task)]
 
         self.write(page=f"/api/item/{task.oid}", item=task)
         self.write(page=f"/api/item/{dst_task.oid}", item=dst_task)
+        self.write(page=f"/api/item/{orig_task.oid}", item=orig_task)
 
     def add_task(self, ev, step, node):
         ev.stopPropagation()
@@ -745,21 +753,23 @@ class KanbanView:
 
 
 class TagView:
-    def __init__(self, task):
+    def __init__(self, task, view):
         self.dialog = None
-        self.task = task
+        self.task, self.view = task, view
 
     def edit(self, _):
         d = self.dialog
         radios = [(fs, doc[rd].value) for fs, tags in _FACET.items() for rd in tags if doc[rd].checked]
         print(radios)
+        self.task.tags = radios
+        self.view.draw_task(self.task)
         d.close()
 
     def draw(self):
         task = self.task
         from browser.widgets.dialog import Dialog
         facet = {fct[0]: fct[1] for fct in task.tags}
-        style = dict(width="1100px", paddingRight="1em")
+        style = dict(width="1100px", paddingRight="1em", height="150px")
         self.dialog = d = Dialog(f"Facets : {task.desc}", style=style, ok_cancel=True)
         d.ok_button.bind("click", self.edit)
         style = dict(paddingBottom="1em", display="flex")
