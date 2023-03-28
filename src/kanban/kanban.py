@@ -46,6 +46,7 @@ Changelog
         retrieve and print new values from popup (23).
         fix move sending task origin and destination to db (27).
         menu names and move tag dialog to tags entry (27).
+        change tags dialog to bulma, start menus (28).
 
 """
 # ----------------------------------------------------------
@@ -542,7 +543,9 @@ class KanbanView:
 
     def draw_task(self, task):
         def do_tag(facet_, tag):
-            f_div = html.DIV(Class="task_icon", style={"background-color": facet_.color})
+            sty = {"background-color": facet_.color, "font-size": "0.75rem", "text-align": "center"}
+            f_div = html.SPAN(Class="box is-small is-rounded is-fullwidth mx-1 p-0", style=sty)
+            # f_div = html.DIV(Class="tag is-rounded is-small", style={"background-color": facet_.color})
             # f_ico = html.I(Class=f"fa fa-{facet_.icon}")
             title = f"{facet_.name}:{tag.name}"
             if tag.icon.startswith("_"):
@@ -554,7 +557,7 @@ class KanbanView:
                 t_ico = html.I(Class=f"fa fa-{tag.icon}", style=dict(color=tag.color), title=title)
             # _ = f_div <= f_ico
             _ = f_div <= t_ico
-            return html.TD(f_div, title=title)
+            return html.TD(f_div, title=title, Class="td is-small")
 
         def do_icon(ico, data):
             _ico = html.TD(html.I(Class=f"fa fa-{ico}"), Class="dropdown")
@@ -601,7 +604,7 @@ class KanbanView:
 
         # menu = html.I(Class="fa fa-bars")
         # command_delete = html.DIV(menu, Class="task_command_delete")
-        icons = html.TR()
+        icons = html.TR(Class="tr is-fullwidth")
         # html.TD(progress, Class="task_command") +
         #     cmd[0] + cmd[1] + cmd[2] + cmd[3] + cmd[4] + cmd[5] + cmd[7] + cmd[8] + cmd[2] + cmd[3] + cmd[4] + cmd[5]
         # )
@@ -754,7 +757,97 @@ class KanbanView:
 
 class TagView:
     def __init__(self, task, view):
-        self.dialog = None
+        self.dialog, self.section = None, None
+        self.task, self.view = task, view
+        self.do_modal = self.modal
+
+    def modal(self):
+        div, head, p, sect, foot, but = html.DIV, html.HEADER, html.P, html.SECTION, html.FOOTER, html.BUTTON
+        head_title = p(f"Tags : {self.task.desc}", Class="title")
+        header = head(head_title, Class="modal-card-head")
+        self.section = section = sect(Class="modal-card-body")
+        ok, cancel = but("OK", Class="button is-success"), but("Cancel", Class="button")
+        ok.bind("click", self.edit)
+        cancel.bind("click", lambda *_: self.dialog.classList.remove('is-active'))
+        footer = foot(ok + cancel, Class="modal-card-foot")
+        # _ = (div(Class ="modal")<= div(Class ="modal-background"))<= div(Class ="modal-card")
+        self.dialog = div(div(div(header+section+footer, Class="modal-card"), Class="modal-background"), Class="modal")
+        _ = doc.body <= self.dialog
+        self.do_modal = lambda *_: None
+        print("did", self.dialog)
+
+    def edit(self, *_):
+        self.dialog.classList.remove('is-active')
+        ...
+
+    def draw(self):
+        self.do_modal()
+        task = self.task
+        self.dialog.classList.add('is-active')
+        facet = {fct[0]: fct[1] for fct in task.tags}
+
+        dp = html.DIV(Class="panel")
+        _ = self.section <= dp
+        db = html.DIV(Class="panel")
+        _ = self.section <= db
+
+        def lb_for(tag, icon, color, title):
+            return html.LABEL(
+                html.I(Class=f"fa fa-{icon}", style=dict(color=color), title=title) + title[:4], For=tag)
+
+        def rl(tag, icon, name):
+            _tag = IcoColor(name, *(icon.split()))
+            return (
+                (html.INPUT(type="radio", ID=tag, name=name, value=tag, checked="checked") if (
+                    name in facet and tag == facet[name]) else html.INPUT(type="radio", ID=tag, name=name, value=tag)) +
+                (lb_for(tag, _tag.icon, _tag.color, tag) if tag != "_self" else lb_for(tag, "ban", "magenta", "none")))
+
+        def fl(tag):
+            return html.FIELDSET(ID=tag, Class="panel")
+        ffs = {facet: IcoColor(facet, fl(tag=facet), tags["_self"].split()[1]) for facet, tags in _FACET.items()}
+
+        def tag_div(child, _):
+            # return html.DIV(child, Class="task_icon", style={"background-color": "slategray"})
+            style = {"background-color": "slategray"}
+            return html.DIV(child, Class="button is-small is-rounded is-fullwidth", style=style)
+        _ = [[ffs[fs].icon <= tag_div(rl(tag, icon, fs), tags)
+              for tag, icon in tags.items()] for fs, tags in _FACET.items()]
+        rows = (dp, list(ffs.values())[:5]), (db, list(ffs.values())[5:])
+
+        def facet_div(name, icon, color):
+            cnt = html.DIV(html.DIV(html.DIV(icon, Class="media-content"), Class="media"), Class="card-content")
+            return html.DIV(html.HEADER(html.P(name, Class="card-header-title"), Class="card-header")+cnt, Class="card",
+                            style=dict(display="inline-block", width="20%", backgroundColor=color))
+
+        _ = [ad <= facet_div(_fs.name, _fs.icon, _fs.color)
+             for ad, val in rows for _fs in val]
+        # _ = [ad <= html.DIV(_fs.name + _fs.icon, Class="box m-0",
+        #                     style=dict(display="inline-block", width="20%", backgroundColor=_fs.color))
+        #      for ad, val in rows for _fs in val]
+        # _ = [db <= html.DIV(_fs.name + _fs.icon, Class="box m-0",
+        #                     style=dict(display="inline-block", width="20%", backgroundColor=_fs.color))
+        #      for _fs in list(ffs.values())[5:]]
+
+
+class MenuView:
+    def __init__(self, task, view):
+        class Modal:
+            def calendar(self, items):
+                pass
+
+            def tags(self, items):
+                pass
+
+            def progress(self, items):
+                pass
+
+            def users(self, items):
+                pass
+
+            def external_links(self, items):
+                pass
+
+        self.dialog = Modal()
         self.task, self.view = task, view
 
     def edit(self, _):
@@ -766,8 +859,22 @@ class TagView:
         d.close()
 
     def draw(self):
-        task = self.task
-        from browser.widgets.dialog import Dialog
+        tsk = self.dialog
+        mark = "calendar tags progress users external_links".split()
+        dialogs = tsk.calendar, tsk.tags, tsk.progress, tsk.users, tsk.external_links
+        tsk = self.task
+        arguments = tsk.calendar, tsk.tags, tsk.progress, tsk.users, tsk.external_links
+        menu_items = zip(mark, arguments, dialogs)
+
+        def sub_item(name, items, dialogs):
+            ul = html.UL()
+            li = [html.LI(html.A(nam), ID=f"_menu_li_{nam}") for nam in items]
+            _ = [ul <= _li for _li in li]
+            _ = [_li.bind("click", _dl) for _li, _dl in dialogs]
+
+        def item(name, args, dialogs):
+            html.LI(html.A(name))
+        '''from browser.widgets.dialog import Dialog
         facet = {fct[0]: fct[1] for fct in task.tags}
         style = dict(width="1100px", paddingRight="1em", height="150px")
         self.dialog = d = Dialog(f"Facets : {task.desc}", style=style, ok_cancel=True)
@@ -799,6 +906,7 @@ class TagView:
         _ = [dp <= html.DIV(_fs.name + _fs.icon,
                             style=dict(display="inline-block", width="10%", backgroundColor=_fs.color))
              for _fs in ffs.values()]
+'''
 
 
 # ----------------------------------------------------------
