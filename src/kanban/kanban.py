@@ -596,9 +596,10 @@ class KanbanView:
         # progress_bar.style.width = percent(task.progress)
         # _ = progress <= progress_bar XXX removed progress!
         icons = "external-link tags comment users calendar bars".split()
-        menu = "links tags comment users coments progress calendar".split() + [task.oid]
+        menu = "links tags comment users progress calendar".split() + [task.oid]
         props = [task.external_links, task.tags, task.comments, task.users, task.calendar, menu]
         cmd += [do_icon(ico, data) for ico, data in zip(icons, props)]
+        MenuView(task, self).draw(cmd[-1])
         # cmd[-1].bind("click", lambda *_: TagView(task, self).draw())
         # cmd += [html.TD(html.I(Class=f"fa fa-{ico}"), Class="task_command_delete") for ico in icons]
 
@@ -832,48 +833,143 @@ class TagView:
 class MenuView:
     def __init__(self, task, view):
         class Modal:
+            def __init__(self):
+                self.modal_div = self.section = self.footer = html.DIV()
+                self.do_modal = self.modal
+                self.tagging = html.DIV, html.HEADER, html.P, html.LABEL, html.INPUT, html.BUTTON, html.SPAN, html.I
+
+            def modal(self):
+                div, head, p, sect, foot, but = html.DIV, html.HEADER, html.P, html.SECTION, html.FOOTER, html.BUTTON
+                head_title = p(f"Task : {here.task.desc}", Class="title")
+                header = head(head_title, Class="modal-card-head")
+                self.section = section = sect(Class="modal-card-body")
+                ok, cancel = but("OK", Class="button is-success"), but("Cancel", Class="button")
+                ok.bind("click", lambda *_: here.editor())
+                cancel.bind("click", lambda *_: self.modal_div.classList.remove('is-active'))
+                self.footer = footer = foot(ok + cancel, Class="modal-card-foot")
+                # _ = (div(Class ="modal")<= div(Class ="modal-background"))<= div(Class ="modal-card")
+                self.modal_div = div(div(div(header + section + footer, Class="modal-card"), Class="modal-background"),
+                                     Class="modal")
+                _ = doc.body <= self.modal_div
+                self.do_modal = lambda *_: None
+                # print("did", self.dialog)
+
+            def form(self, temp, items):
+                self.modal()
+                contents = temp(items)
+                # form = div(contents+inp(type="hidden", name="whatever", value="foobar"))
+                _ = [self.section <= field for field in contents]
+                self.modal_div.classList.add('is-active')
+
             def calendar(self, items):
-                pass
+                def edit(*_):
+                    print("calendar edit")
+                    [print(fld.value) for _, fld in fields]
+                    self.modal_div.classList.remove('is-active')
+                    ...
+
+                div, head, p, lab, inp, but, sp, ic = self.tagging
+                here.editor = edit
+                add = but("ADD", Class="button is-success")
+                fields = [(eve, inp(Class="input", type="text", value=dater)) for eve, dater in items]
+                return [div(div(lab(eve, Class="label") + input_field, Class="control"), Class="field")
+                        for eve, input_field in fields]
 
             def tags(self, items):
                 pass
+
+            def one_field(self, items, plc, ico):
+                def adder(*_):
+                    print("comment add")
+                    _input = inp(Class="input", type="text", placeholder=plc)
+                    fields.append(("", _input))
+                    _ = self.section <= div(
+                        div(_input+_icon, Class="control has-icons-left"), Class="field")
+
+                def edit(*_):
+                    print("comment edit")
+                    [print(fld.value) for _, fld in fields]
+                    self.modal_div.classList.remove('is-active')
+                    ...
+
+                div, head, p, lab, inp, but, sp, ic = self.tagging
+                here.editor = edit
+                add = but("ADD", Class="button is-primary")
+                add.bind("click", adder)
+                _icon = sp(ic(Class=ico), Class="icon is-small is-left")
+                fields = [(eve, inp(Class="input", type="text", value=dater)) for eve, dater in items]
+                return [div(div(input_field+_icon, Class="control has-icons-left"), Class="field")
+                        for eve, input_field in fields]+[add]
+
+            def comments(self, items):
+                return self.one_field(items, "Add your comment here", "fa fa-comment")
 
             def progress(self, items):
                 pass
 
             def users(self, items):
+                return self.one_field(items, "Add a new partner here", "fa fa-users")
+
+            def color(self, items):
                 pass
 
             def external_links(self, items):
-                pass
+                return self.one_field(items, "Add your link here", "fa fa-external-link")
 
+        here = self
+        self.editor = self.edit
         self.dialog = Modal()
+        self.menu = None
         self.task, self.view = task, view
 
-    def edit(self, _):
-        d = self.dialog
-        radios = [(fs, doc[rd].value) for fs, tags in _FACET.items() for rd in tags if doc[rd].checked]
-        print(radios)
-        self.task.tags = radios
-        self.view.draw_task(self.task)
-        d.close()
+    def edit(self, *_):
+        self.dialog.modal_div.classList.remove('is-active')
 
-    def draw(self):
-        tsk = self.dialog
-        mark = "calendar tags progress users external_links".split()
-        dialogs = tsk.calendar, tsk.tags, tsk.progress, tsk.users, tsk.external_links
+    def draw(self, dropper):
+        dlg = self.dialog
+        _ic = "fa fa-{}"
+        # _ico = html.SPAN(html.I(Class=), Class="icon")
+        icons = "external-link tags comment users calendar battery-empty palette".split()
+        mark = "links tags comment users calendar progress color".split()
+        batt_colors = "gray red orange green blue".split()
+        batt = [(cl, ico, tt) for cl, ico, tt in zip(batt_colors, BATT, '0% 25% 50% 75% 100%'.split())]
+        colors = [(cl, ico, tt) for cl, ico, tt in zip(TASKS_COLORS, ["palette"]*30, [""]*30)]
+        dialogs = dlg.external_links, dlg.tags, dlg.comments, dlg.users, dlg.calendar, batt, colors
         tsk = self.task
-        arguments = tsk.calendar, tsk.tags, tsk.progress, tsk.users, tsk.external_links
-        menu_items = zip(mark, arguments, dialogs)
+        arguments = tsk.external_links, tsk.tags, tsk.comments, tsk.users, tsk.calendar, tsk.progress, tsk.color_id
+        menu_items = list(zip(mark, icons, arguments, dialogs))
 
-        def sub_item(name, items, dialogs):
-            ul = html.UL()
-            li = [html.LI(html.A(nam), ID=f"_menu_li_{nam}") for nam in items]
-            _ = [ul <= _li for _li in li]
-            _ = [_li.bind("click", _dl) for _li, _dl in dialogs]
+        def popups(nam, ic, it, dl):
+            def menu_item(color, icon, title):
+                _ico = html.I(Class=f"fa fa-{icon}", style=dict(color=color), title=title)
+                # return html.A(html.SPAN(html.SPAN(_ico, Class="icon") + title, Class="icon-text"))
+                return html.SPAN(html.SPAN(_ico, Class="icon") + html.SPAN(title), Class="icon-text")
 
-        def item(name, args, dialogs):
-            html.LI(html.A(name))
+            ico_ctn = html.DIV(Class="dropdown-content")
+            _ = [ico_ctn <= menu_item(*_dialogs) for _dialogs in dl]
+            na = html.SPAN(nam)
+            an = html.DIV(html.SPAN(html.SPAN(html.I(Class=f"fa fa-{ic}"), Class="icon") + na, Class="icon-text"), Class="dropdown")
+            item_ = html.LI(an)
+            # _ = an <= ico_ctn
+            # an.bind("click", lambda *_: self.dialog.form(dl, it))
+            # items = [html.LI(html.A(name)+sub_item(name, it, dl)) for name, it, dl in menu_items]
+            return item_
+
+        def item(nam, ic, it, dl):
+            na = html.SPAN(nam)
+            an = html.SPAN(html.SPAN(html.I(Class=f"fa fa-{ic}"), Class="icon") + na, Class="icon-text")
+
+            item_ = html.LI(an)
+
+            an.bind("click", lambda *_: self.dialog.form(dl, it))
+            # items = [html.LI(html.A(name)+sub_item(name, it, dl)) for name, it, dl in menu_items]
+            return item_
+
+        items = [item(*its) for its in menu_items[:-2]]+[popups(*its) for its in menu_items[-2:]]
+        menu = html.UL()
+        _ = [menu <= it for it in items]
+        self.menu = html.ASIDE(menu, Class="menu")
+        _ = dropper <= html.DIV(self.menu, Class="dropdown-content")
         '''from browser.widgets.dialog import Dialog
         facet = {fct[0]: fct[1] for fct in task.tags}
         style = dict(width="1100px", paddingRight="1em", height="150px")
