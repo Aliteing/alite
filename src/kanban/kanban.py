@@ -47,6 +47,7 @@ Changelog
         fix move sending task origin and destination to db (27).
         menu names and move tag dialog to tags entry (27).
         change tags dialog to bulma, start menus (28).
+        menu popup test working, need selected (30).
 
 """
 # ----------------------------------------------------------
@@ -870,7 +871,7 @@ class MenuView:
 
                 div, head, p, lab, inp, but, sp, ic = self.tagging
                 here.editor = edit
-                add = but("ADD", Class="button is-success")
+                # add = but("ADD", Class="button is-success")
                 fields = [(eve, inp(Class="input", type="text", value=dater)) for eve, dater in items]
                 return [div(div(lab(eve, Class="label") + input_field, Class="control"), Class="field")
                         for eve, input_field in fields]
@@ -940,16 +941,25 @@ class MenuView:
         menu_items = list(zip(mark, icons, arguments, dialogs))
 
         def popups(nam, ic, it, dl):
-            def menu_item(color, icon, title):
+            def pop_editor(ev, iid):
+                ev.stopPropagation()
+                ev.preventDefault()
+                print("pop_editor", iid, activ)
+
+            def menu_item(color, icon, title, iid=0):
                 _ico = html.I(Class=f"fa fa-{icon}", style=dict(color=color), title=title)
                 # return html.A(html.SPAN(html.SPAN(_ico, Class="icon") + title, Class="icon-text"))
-                return html.SPAN(html.SPAN(_ico, Class="icon") + html.SPAN(title), Class="icon-text")
+                _item_class = "icon-text is-activ" if iid == it else "icon-text"
+                _item = html.LI(html.SPAN(_ico, Class="icon") + html.SPAN(title), Class=_item_class)
+                _item.bind("click", lambda ev: pop_editor(ev, iid))
+                return _item
 
-            ico_ctn = html.DIV(Class="dropdown-content")
-            _ = [ico_ctn <= menu_item(*_dialogs) for _dialogs in dl]
+            ico_ctn = html.LI()
+            _ = [ico_ctn <= menu_item(iid=iid, *_dialogs) for iid, _dialogs in enumerate(dl[:15])]
             na = html.SPAN(nam)
-            an = html.DIV(html.SPAN(html.SPAN(html.I(Class=f"fa fa-{ic}"), Class="icon") + na, Class="icon-text"), Class="dropdown")
-            item_ = html.LI(an)
+            activ = it  # [-2] if len(dl) < 5 else it[-1]
+            an = html.DIV(html.SPAN(html.SPAN(html.I(Class=f"fa fa-{ic}"), Class="icon") + na, Class="icon-text"))
+            item_ = html.LI(an+html.UL(ico_ctn))
             # _ = an <= ico_ctn
             # an.bind("click", lambda *_: self.dialog.form(dl, it))
             # items = [html.LI(html.A(name)+sub_item(name, it, dl)) for name, it, dl in menu_items]
