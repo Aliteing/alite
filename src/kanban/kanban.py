@@ -48,6 +48,7 @@ Changelog
         menu names and move tag dialog to tags entry (27).
         change tags dialog to bulma, start menus (28).
         menu popup test working, need selected (30).
+        review task colors, add tags modal (31).
 
 """
 # ----------------------------------------------------------
@@ -74,14 +75,19 @@ STEPS_COLORS = (
 _TASKS_COLORS = [
     "#EE0000", "#00CC00", "#0088EE", "#EEEE00", "#EEA500"
 ]
-TASKS_COLORS = tuple("peachpuff rosybrown lightyellow greenyellow palegreen"
-                     " lightcyan aquamarine burlywood plum orchid".split())
+TASKY_COLORS = tuple("LightCyan LightGray BurlyWood PeachPuff LightSalmon Salmon LightPink DarkOrange Red"
+                     " Yellow PaleGreen GreenYellow"
+                     " PowderBlue Aquamarine DeepSkyBlue DodgerBlue MediumOrchid RosyBrown plum orchid".split())
+TASKS_COLORS = tuple("LightCyan LemonChiffon PaleGreen PowderBlue Aquamarine"
+                     " LightSalmon LightPink Orchid PeachPuff Plum"
+                     " LightGray Yellow  GreenYellow DeepSkyBlue DodgerBlue"
+                     " Salmon Red MediumOrchid DarkOrange BurlyWood".split())
 
 FACET_COLOR_ = F_ = "darkred darkorange peach gold darkgreen navy" \
-               " indigo purple deeppink brown".split()
+                    " indigo purple deeppink brown".split()
 
-FACET_COLORS = FC = "tomato plum violet lightsteelblue cornflowerblue paleturquoise" \
-               " palegreen darkkhaki coral sandybrown".split()
+FACET_COLORS = FC = "tomato HotPink violet LightSteelBlue CornFlowerBlue PaleTurquoise" \
+                    " DarkSeaGreen DarkKhaki coral SandyBrown".split()
 
 TIME_FMT = "%Y/%m/%d %H:%M:%S"
 
@@ -122,6 +128,8 @@ _FACET = dict(
         _self=f"heart  {FC[9]}", common="spray-can-sparkles salmon", unusual="hand-sparkles cyan",
         rare="star-half-stroke green", legendary="star orange", mythical="wand-sparkles yellow"),
 )
+
+
 # FACET = {fk: {tk: IcoColor(*tv.split()) for tk, tv in fv.items()} for fk, fv in _FACET.items()}
 
 
@@ -244,6 +252,7 @@ class Task:
             _tags.update(argument)
             attribute = list(_tags.items())
             return attribute
+
         pairing = zip([tags, users, calendar, comments, external_links],
                       [self.tags, self.users, self.calendar, self.comments, self.external_links])
         _ = [to_fro_dict(argument, attribute) for argument, attribute in pairing]
@@ -275,7 +284,7 @@ class Board(Task):
         self.schema_revision = schema_revision
         self.counter = int(counter)
         self.steps_colors = list(steps_colors)
-        self.tasks_colors = list(tasks_colors)
+        self.tasks_colors = TASKS_COLORS or list(tasks_colors)
         self.current = current
 
 
@@ -285,7 +294,7 @@ class KanbanBoard:
         self.kanban = kanban
         control = "play pause stop".split()
         self.board_name = "LABASE"
-        self.board_span = html.SPAN(self.board_name+"&nbsp;&nbsp;&nbsp;", Id="_control_board_name")
+        self.board_span = html.SPAN(self.board_name + "&nbsp;&nbsp;&nbsp;", Id="_control_board_name")
         self.external_link = html.SPAN(Id="_external_link", Class="fa fa-external-link")
         self.menu = html.SPAN(Id="_icon_menu", Class="fa fa-bars")
         self.controls = [html.SPAN("&nbsp;", Id=f"_control_{ico}", Class=f"fa-solid fa-{ico}") for ico in control]
@@ -321,7 +330,7 @@ class KanbanBoard:
         _ = [control.bind("click", handler)
              for control, handler in zip(controls, [self.start_task, self.pause_task, self.stop_task])]
         _ = node <= self.task_span
-        node.style.width = percent(5*width+1)
+        node.style.width = percent(5 * width + 1)
         node.style.backgroundColor = "ivory"
         _ = board <= node
         bar = self.draw_deadline(base=node)
@@ -387,7 +396,7 @@ class KanbanView:
         def do_at(txt):
             txt, time_lapse = int(txt[:-1]), txt[-1].lower()
             at_parse = dict(
-                d=lambda t=txt: str(now+dd(t)), w=lambda t=txt: str(now+ww(t)), h=lambda t=txt: str(now+hh(t)))
+                d=lambda t=txt: str(now + dd(t)), w=lambda t=txt: str(now + ww(t)), h=lambda t=txt: str(now + hh(t)))
             tsk.calendar = insert_unique(tsk.calendar, "due", at_parse[time_lapse]())
 
         def do_hash(txt):
@@ -423,6 +432,7 @@ class KanbanView:
                 pass
             # print(f"arg {arg}", _args, mrk)
             return _args
+
         mark = "@#%&!"
         _ = [do_mark(arg, mrk) for arg, mrk in zip(mark, [do_at, do_hash, do_pct, do_amp, do_exc])]
         rex = f" [{mark}]\S*"
@@ -470,6 +480,7 @@ class KanbanView:
                 print("complete ok>>>> ")  # + _req.text)
             else:
                 print("error detected>>>> " + _req.text)
+
         page = "/api/load"
 
         req = ajax.Ajax()
@@ -567,16 +578,17 @@ class KanbanView:
             _data = [":".join([dt[0], dt[1][5: -13]]) for dt in data] if ico == "calendar" else data
             _data = [":".join(dt) for dt in data] if ico == "tags" else _data
             _ = _ico <= ico_ctn
-            spans = [html.DIV(html.SPAN(str(datum))+html.BR()) for datum in _data if "_self" not in datum]
+            spans = [html.DIV(html.SPAN(str(datum)) + html.BR()) for datum in _data if "_self" not in datum]
             if "links" in data:
                 _ = [spn.bind("click", lambda *_: alert("not implemented")) for ix, spn in enumerate(spans) if ix != 1]
                 spans[1].bind("click", lambda *_: TagView(task, self).draw())
             _ = [ico_ctn <= span for span in spans]
             return _ico if data else None
+
         node = doc[task.oid]
         node.html = ""
         node.style.backgroundColor = self.kanban.tasks_colors[task.color_id]
-        facet = {key: IcoColor(key, *(value["_self"].split()))for key, value in _FACET.items()}
+        facet = {key: IcoColor(key, *(value["_self"].split())) for key, value in _FACET.items()}
         facets = {fk: {tk: IcoColor(tk, *tv.split()) for tk, tv in fv.items() if tk != "_self"}
                   for fk, fv in _FACET.items()}
         # has to fix old version of facet that was code and now is 'develop'
@@ -600,7 +612,7 @@ class KanbanView:
         menu = "links tags comment users progress calendar".split() + [task.oid]
         props = [task.external_links, task.tags, task.comments, task.users, task.calendar, menu]
         cmd += [do_icon(ico, data) for ico, data in zip(icons, props)]
-        MenuView(task, self).draw(cmd[-1])
+        MenuView(task, self).draw(cmd[-1], node)
         # cmd[-1].bind("click", lambda *_: TagView(task, self).draw())
         # cmd += [html.TD(html.I(Class=f"fa fa-{ico}"), Class="task_command_delete") for ico in icons]
 
@@ -773,7 +785,8 @@ class TagView:
         cancel.bind("click", lambda *_: self.dialog.classList.remove('is-active'))
         footer = foot(ok + cancel, Class="modal-card-foot")
         # _ = (div(Class ="modal")<= div(Class ="modal-background"))<= div(Class ="modal-card")
-        self.dialog = div(div(div(header+section+footer, Class="modal-card"), Class="modal-background"), Class="modal")
+        self.dialog = div(div(div(header + section + footer, Class="modal-card"), Class="modal-background"),
+                          Class="modal")
         _ = doc.body <= self.dialog
         self.do_modal = lambda *_: None
         print("did", self.dialog)
@@ -783,15 +796,15 @@ class TagView:
         ...
 
     def draw(self):
-        self.do_modal()
+        # self.do_modal()
         task = self.task
-        self.dialog.classList.add('is-active')
+        # self.dialog.classList.add('is-active')
         facet = {fct[0]: fct[1] for fct in task.tags}
 
         dp = html.DIV(Class="panel")
-        _ = self.section <= dp
+        # _ = self.section <= dp
         db = html.DIV(Class="panel")
-        _ = self.section <= db
+        # _ = self.section <= db
 
         def lb_for(tag, icon, color, title):
             return html.LABEL(
@@ -800,25 +813,30 @@ class TagView:
         def rl(tag, icon, name):
             _tag = IcoColor(name, *(icon.split()))
             return (
-                (html.INPUT(type="radio", ID=tag, name=name, value=tag, checked="checked") if (
-                    name in facet and tag == facet[name]) else html.INPUT(type="radio", ID=tag, name=name, value=tag)) +
-                (lb_for(tag, _tag.icon, _tag.color, tag) if tag != "_self" else lb_for(tag, "ban", "magenta", "none")))
+                    (html.INPUT(type="radio", ID=tag, name=name, value=tag, checked="checked") if (
+                            name in facet and tag == facet[name]) else html.INPUT(type="radio", ID=tag, name=name,
+                                                                                  value=tag)) +
+                    (lb_for(tag, _tag.icon, _tag.color, tag) if tag != "_self" else lb_for(tag, "ban", "magenta",
+                                                                                           "none")))
 
         def fl(tag):
             return html.FIELDSET(ID=tag, Class="panel")
+
         ffs = {facet: IcoColor(facet, fl(tag=facet), tags["_self"].split()[1]) for facet, tags in _FACET.items()}
 
         def tag_div(child, _):
             # return html.DIV(child, Class="task_icon", style={"background-color": "slategray"})
             style = {"background-color": "slategray"}
             return html.DIV(child, Class="button is-small is-rounded is-fullwidth", style=style)
+
         _ = [[ffs[fs].icon <= tag_div(rl(tag, icon, fs), tags)
               for tag, icon in tags.items()] for fs, tags in _FACET.items()]
         rows = (dp, list(ffs.values())[:5]), (db, list(ffs.values())[5:])
 
         def facet_div(name, icon, color):
             cnt = html.DIV(html.DIV(html.DIV(icon, Class="media-content"), Class="media"), Class="card-content")
-            return html.DIV(html.HEADER(html.P(name, Class="card-header-title"), Class="card-header")+cnt, Class="card",
+            return html.DIV(html.HEADER(html.P(name, Class="card-header-title"), Class="card-header") + cnt,
+                            Class="card",
                             style=dict(display="inline-block", width="20%", backgroundColor=color))
 
         _ = [ad <= facet_div(_fs.name, _fs.icon, _fs.color)
@@ -829,6 +847,7 @@ class TagView:
         # _ = [db <= html.DIV(_fs.name + _fs.icon, Class="box m-0",
         #                     style=dict(display="inline-block", width="20%", backgroundColor=_fs.color))
         #      for _fs in list(ffs.values())[5:]]
+        return [dp, db]
 
 
 class MenuView:
@@ -877,7 +896,8 @@ class MenuView:
                         for eve, input_field in fields]
 
             def tags(self, items):
-                pass
+                _ = self, items
+                return here.tags.draw()
 
             def one_field(self, items, plc, ico):
                 def adder(*_):
@@ -885,7 +905,7 @@ class MenuView:
                     _input = inp(Class="input", type="text", placeholder=plc)
                     fields.append(("", _input))
                     _ = self.section <= div(
-                        div(_input+_icon, Class="control has-icons-left"), Class="field")
+                        div(_input + _icon, Class="control has-icons-left"), Class="field")
 
                 def edit(*_):
                     print("comment edit")
@@ -899,20 +919,14 @@ class MenuView:
                 add.bind("click", adder)
                 _icon = sp(ic(Class=ico), Class="icon is-small is-left")
                 fields = [(eve, inp(Class="input", type="text", value=dater)) for eve, dater in items]
-                return [div(div(input_field+_icon, Class="control has-icons-left"), Class="field")
-                        for eve, input_field in fields]+[add]
+                return [div(div(input_field + _icon, Class="control has-icons-left"), Class="field")
+                        for eve, input_field in fields] + [add]
 
             def comments(self, items):
                 return self.one_field(items, "Add your comment here", "fa fa-comment")
 
-            def progress(self, items):
-                pass
-
             def users(self, items):
                 return self.one_field(items, "Add a new partner here", "fa fa-users")
-
-            def color(self, items):
-                pass
 
             def external_links(self, items):
                 return self.one_field(items, "Add your link here", "fa fa-external-link")
@@ -922,11 +936,12 @@ class MenuView:
         self.dialog = Modal()
         self.menu = None
         self.task, self.view = task, view
+        self.tags = TagView(task, view)
 
     def edit(self, *_):
         self.dialog.modal_div.classList.remove('is-active')
 
-    def draw(self, dropper):
+    def draw(self, dropper, node):
         dlg = self.dialog
         _ic = "fa fa-{}"
         # _ico = html.SPAN(html.I(Class=), Class="icon")
@@ -934,7 +949,7 @@ class MenuView:
         mark = "links tags comment users calendar progress color".split()
         batt_colors = "gray red orange green blue".split()
         batt = [(cl, ico, tt) for cl, ico, tt in zip(batt_colors, BATT, '0% 25% 50% 75% 100%'.split())]
-        colors = [(cl, ico, tt) for cl, ico, tt in zip(TASKS_COLORS, ["palette"]*30, [""]*30)]
+        colors = [(cl, ico, tt) for cl, ico, tt in zip(TASKS_COLORS, ["palette"] * 30, [""] * 30)]
         dialogs = dlg.external_links, dlg.tags, dlg.comments, dlg.users, dlg.calendar, batt, colors
         tsk = self.task
         arguments = tsk.external_links, tsk.tags, tsk.comments, tsk.users, tsk.calendar, tsk.progress, tsk.color_id
@@ -944,10 +959,13 @@ class MenuView:
             def pop_editor(ev, iid):
                 ev.stopPropagation()
                 ev.preventDefault()
+                self.task.color_id = iid if ic == "palette" else None
+                node.style.backgroundColor = self.view.kanban.tasks_colors[iid] if ic == "palette" else None
                 print("pop_editor", iid, activ)
 
             def menu_item(color, icon, title, iid=0):
-                _ico = html.I(Class=f"fa fa-{icon}", style=dict(color=color), title=title)
+                tit = color if ic == "palette" else title
+                _ico = html.I(Class=f"fa fa-{icon}", style=dict(color=color), title=tit)
                 # return html.A(html.SPAN(html.SPAN(_ico, Class="icon") + title, Class="icon-text"))
                 _item_class = "icon-text is-activ" if iid == it else "icon-text"
                 _item = html.LI(html.SPAN(_ico, Class="icon") + html.SPAN(title), Class=_item_class)
@@ -955,64 +973,35 @@ class MenuView:
                 return _item
 
             ico_ctn = html.LI()
-            _ = [ico_ctn <= menu_item(iid=iid, *_dialogs) for iid, _dialogs in enumerate(dl[:15])]
+            _ = [ico_ctn <= menu_item(iid=iid, *_dialogs) for iid, _dialogs in enumerate(dl[:20])]
             na = html.SPAN(nam)
             activ = it  # [-2] if len(dl) < 5 else it[-1]
             an = html.DIV(html.SPAN(html.SPAN(html.I(Class=f"fa fa-{ic}"), Class="icon") + na, Class="icon-text"))
-            item_ = html.LI(an+html.UL(ico_ctn))
+            item_ = html.LI(an + html.UL(ico_ctn))
             # _ = an <= ico_ctn
             # an.bind("click", lambda *_: self.dialog.form(dl, it))
             # items = [html.LI(html.A(name)+sub_item(name, it, dl)) for name, it, dl in menu_items]
             return item_
 
         def item(nam, ic, it, dl):
+            def item_editor(ev):
+                ev.stopPropagation()
+                ev.preventDefault()
+                self.dialog.form(dl, it)
             na = html.SPAN(nam)
             an = html.SPAN(html.SPAN(html.I(Class=f"fa fa-{ic}"), Class="icon") + na, Class="icon-text")
 
             item_ = html.LI(an)
 
-            an.bind("click", lambda *_: self.dialog.form(dl, it))
+            an.bind("click", lambda ev: item_editor(ev))
             # items = [html.LI(html.A(name)+sub_item(name, it, dl)) for name, it, dl in menu_items]
             return item_
 
-        items = [item(*its) for its in menu_items[:-2]]+[popups(*its) for its in menu_items[-2:]]
+        items = [item(*its) for its in menu_items[:-2]] + [popups(*its) for its in menu_items[-2:]]
         menu = html.UL()
         _ = [menu <= it for it in items]
         self.menu = html.ASIDE(menu, Class="menu")
         _ = dropper <= html.DIV(self.menu, Class="dropdown-content")
-        '''from browser.widgets.dialog import Dialog
-        facet = {fct[0]: fct[1] for fct in task.tags}
-        style = dict(width="1100px", paddingRight="1em", height="150px")
-        self.dialog = d = Dialog(f"Facets : {task.desc}", style=style, ok_cancel=True)
-        d.ok_button.bind("click", self.edit)
-        style = dict(paddingBottom="1em", display="flex")
-
-        dp = html.DIV(style=style)
-        _ = d.panel <= dp
-
-        def lb_for(tag, icon, color, title):
-            return html.LABEL(
-                html.I(Class=f"fa fa-{icon}", style=dict(color=color), title=title) + title[:2], For=tag)
-
-        def rl(tag, icon, name):
-            _tag = IcoColor(name, *(icon.split()))
-            return (
-                (html.INPUT(type="radio", ID=tag, name=name, value=tag, checked="checked") if (
-                    name in facet and tag == facet[name]) else html.INPUT(type="radio", ID=tag, name=name, value=tag)) +
-                (lb_for(tag, _tag.icon, _tag.color, tag) if tag != "_self" else lb_for(tag, "ban", "magenta", "none")))
-
-        def fl(tag):
-            return html.FIELDSET(ID=tag)
-        ffs = {facet: IcoColor(facet, fl(tag=facet), tags["_self"].split()[1]) for facet, tags in _FACET.items()}
-
-        def tag_div(child, _):
-            return html.DIV(child, Class="task_icon", style={"background-color": "slategray"})
-        _ = [[ffs[fs].icon <= tag_div(rl(tag, icon, fs), tags)
-              for tag, icon in tags.items()] for fs, tags in _FACET.items()]
-        _ = [dp <= html.DIV(_fs.name + _fs.icon,
-                            style=dict(display="inline-block", width="10%", backgroundColor=_fs.color))
-             for _fs in ffs.values()]
-'''
 
 
 # ----------------------------------------------------------
@@ -1117,7 +1106,6 @@ def ev_callback(method, *args):
 
 # ----------------------------------------------------------
 def init_demo(kanban):
-
     def init_model():
         from random import sample, randint, choice
         for tsk_id, tsk_obj in kanban.tasks.items():
