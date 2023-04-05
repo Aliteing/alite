@@ -33,7 +33,7 @@ import os
 from tornado.web import Application, RequestHandler, StaticFileHandler
 from tornado.ioloop import IOLoop
 import json
-from atlas_model import DS
+# from atlas_model import DS
 
 # eica = {"": ""}
 
@@ -49,7 +49,8 @@ class Eica(RequestHandler):
     tasks = {"": ""}
 
     def get(self):
-        self.write(json.dumps(DS.load_all()))
+        pass
+        # self.write(json.dumps(DS.load_all()))
         # self.write(json.dumps(Eica.tasks))
 
     def _get(self):
@@ -70,10 +71,24 @@ class Eica(RequestHandler):
         self.write({'message': 'whole base saved'})
 
 
+class Score(RequestHandler):
+
+    def get(self):
+        self.write("10001")
+        # self.write(json.dumps(Eica.tasks))
+
+    def post(self, *_):
+        # fields = json.loads(self.request.body)
+        fields = self.request.arguments
+        fields = {k: str(v[0], "utf8") for k, v in fields.items()}
+        fields = json.dumps(fields)
+        print("score post", fields)
+
+
 class Home(RequestHandler):
 
     def get(self):
-        self.write(json.dumps(DS.load_all()))
+        self.write("10001")
         # self.write(json.dumps(Eica.tasks))
 
     def post(self, *_):
@@ -102,6 +117,7 @@ class EicaItem(RequestHandler):
 
 def make_app():
     current_path = os.path.dirname(__file__)
+    assets_path = os.path.join(current_path, "..", "game", "assets")
     static_path = os.path.join(current_path, "..", "game")
     template_path = os.path.join(current_path, "templates")
     image_path = os.path.join(current_path, "image")
@@ -112,9 +128,12 @@ def make_app():
         ("/api/load", Eica),
         ("/api/save", Eica),
         ("/home/save", Home),
+        ("/record/getid", Score),
+        ("/record/store", Score),
         (r"/api/item", EicaItem),
         (r"/api/item/([^/]+)?", EicaItem),
         (r"/home/(.*\.py)", StaticFileHandler,  {'path': static_path}),
+        (r"/home/assets/(.*\.png)", StaticFileHandler,  {'path': assets_path}),
         (r"/(.*\.css)", StaticFileHandler,  {'path': template_path}),
         (r"/image/(.*\.ico)", StaticFileHandler,  {'path': image_path}),
         (r"/image/(.*\.jpg)", StaticFileHandler,  {'path': image_path})

@@ -26,8 +26,13 @@ Changelog
 ---------
 .. versionadded::    23.04
         open a user register window(05).
+        uses old python version to run Phaser (05).
 
 """
-def main():
-    pass
+from eica.main import JogoEica, __version__
 
+
+def main(gid=None):
+    # JogoEica.JOGO = JogoEica(gid)
+    JogoEica.JOGO = JogoEica(gid)
+    return __version__
