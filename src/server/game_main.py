@@ -25,71 +25,56 @@
 Changelog
 ---------
 .. versionadded::    23.04
-        open a user register window(05).
+        open a user register window, receive score in json (06).
 
 """
 import os
+from typing import Optional, Awaitable
 
 from tornado.web import Application, RequestHandler, StaticFileHandler
 from tornado.ioloop import IOLoop
 import json
 # from atlas_model import DS
 
-# eica = {"": ""}
+
+class LitHandler(RequestHandler):
+    def data_received(self, chunk: bytes) -> Optional[Awaitable[None]]:
+        pass
 
 
-class MainPage(RequestHandler):
+class MainPage(LitHandler):
+
     def get(self):
         self.render("home.html", titulo="Alite - Games", version="23.04")
-        # self.write({'items': items})
 
 
-class Eica(RequestHandler):
-    eica = {"": ""}
-    tasks = {"": ""}
+class Score(LitHandler):
 
     def get(self):
-        pass
-        # self.write(json.dumps(DS.load_all()))
-        # self.write(json.dumps(Eica.tasks))
-
-    def _get(self):
-        # self.write({'items': items})
-        with open("kbj.json", "r") as fjson:
-            items = json.load(fjson)
-            self.write(json.dumps(items))
-        # self.write(json.dumps(Eica.tasks))
-
-    def post(self, *_):
-        items = json.loads(self.request.body)
-        Eica.eica = {att: val for att, val in items.items() if att != "tasks"}
-        # Eica.eica = {att: val for att, val in items["EicaModel"].items() if att != "tasks"}
-        with open("kbj.json", "w") as fjson:
-            json.dump(items, fjson)
-        # print("eica post", items)
-        # Eica.tasks = items["tasks"]
-        self.write({'message': 'whole base saved'})
-
-
-class Score(RequestHandler):
-
-    def get(self):
-        self.write("10001")
-        # self.write(json.dumps(Eica.tasks))
+        import uuid
+        session_id = str(uuid.uuid4().fields[-1])[:9]
+        self.write(session_id)
 
     def post(self, *_):
         # fields = json.loads(self.request.body)
-        fields = self.request.arguments
-        fields = {k: str(v[0], "utf8") for k, v in fields.items()}
+        # _fields = str(self.request.body, "utf8")
+        data = json.loads(self.request.body.decode('utf-8'))
+        print('Got JSON data:', data)
+        # _fields = {k: v for pair in _fields.split('&') for k, v in pair.split("=") if pair}
+        # _fields = dict([pair.split("=") for pair in _fields.split('&')])
+        fields = self.request.body_arguments
+        fields = {k: self.get_argument(k) for k in fields}
+        # fields = {k: str(v[0], "utf8") for k, v in fields.items()}
         fields = json.dumps(fields)
-        print("score post", fields)
+        print("score post", fields, data, "*", _)
 
 
-class Home(RequestHandler):
+class Home(LitHandler):
 
     def get(self):
-        self.write("10001")
-        # self.write(json.dumps(Eica.tasks))
+        import uuid
+        session_id = str(uuid.uuid4().fields[-1])[:9]
+        self.write(session_id)
 
     def post(self, *_):
         # fields = json.loads(self.request.body)
@@ -98,21 +83,6 @@ class Home(RequestHandler):
         fields = json.dumps(fields)
         print("home post", fields)
         self.render("game.html", titulo="Alite - Games", version="23.04")
-
-        # self.write({'message': 'whole registry saved'})
-
-
-class EicaItem(RequestHandler):
-    def post(self, oid):
-        item = json.loads(self.request.body)
-        Eica.tasks[oid] = item
-        # print("TodoItem item", item)
-        # DS.upsert(item)
-        self.write({"message": f"new item {str(oid)} added or updated"})
-
-    def delete(self, oid):
-        Eica.tasks.pop(oid) if id in Eica.tasks else None
-        self.write({'message': 'Item with id %s was deleted' % id})
 
 
 def make_app():
@@ -125,13 +95,9 @@ def make_app():
 
     urls = [
         ("/", MainPage),
-        ("/api/load", Eica),
-        ("/api/save", Eica),
         ("/home/save", Home),
         ("/record/getid", Score),
         ("/record/store", Score),
-        (r"/api/item", EicaItem),
-        (r"/api/item/([^/]+)?", EicaItem),
         (r"/home/(.*\.py)", StaticFileHandler,  {'path': static_path}),
         (r"/home/assets/(.*\.png)", StaticFileHandler,  {'path': assets_path}),
         (r"/(.*\.css)", StaticFileHandler,  {'path': template_path}),
@@ -148,10 +114,10 @@ def make_app():
 def start_server():
     from tornado.options import define, options
 
-    define("port", default=8080, help="port to listen on")
+    define("port", default=8080, help="port to listen on for game server")
     app = make_app()
     app.listen(options.port)
-    print(f"listening on port {options.port}")
+    print(f"game listening on port {options.port}")
     IOLoop.instance().start()
 
 

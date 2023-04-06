@@ -33,6 +33,9 @@ Changelog
         fix task_ids and _id in populated atlas (14).
         fix Persist upsert argument _idx="_id" (22).
 
+.. versionadded::    23.04
+        parameterize database and collection (06).
+
 """
 from pprint import pprint
 
@@ -40,18 +43,17 @@ import pymongo
 from pymongo import UpdateOne
 
 
-def init(passwd):
-    # passwd = os.environ['ALITE']
+def init(passwd, data_base="alite_kanban", collection="tasks"):
     username = "carlotolla9"
     print("ALITE", passwd)
     db_url = "alitelabase.b1lm6fr.mongodb.net"
     con_string = f"mongodb+srv://{username}:{passwd}@{db_url}/?retryWrites=true&w=majority"
     client = pymongo.MongoClient(con_string)
-    mydb = client.alite_kanban
+    mydb = client[data_base]
 
-    mycol = mydb["tasks"]
-    print("did", mycol)
-    return mycol
+    my_col = mydb[collection]
+    print("did", my_col)
+    return my_col
 
 
 def populate():
@@ -71,10 +73,8 @@ def populate():
 
 
 class Persist:
-    def __init__(self):
-        # _client = pymongo.MongoClient(con_string)
-        self.db = init(get_pass())
-        # self.db = _client.alite_kanban
+    def __init__(self, data_base="alite_kanban", collection="tasks"):
+        self.db = init(get_pass(), data_base=data_base, collection=collection)
 
     def load_all(self):
         # kind = dict(task="task", step="step", LABA="board")
@@ -162,6 +162,14 @@ def _local_up():
         print("dbs", dbs)
 
 
+def game_populate():
+    global DS
+    DS = Persist(data_base="alite_game", collection="score")
+    data = {'doc_id': '824909783', 'carta': '__A_T_I_V_A__', 'casa': '0_0',
+            'move': 'ok', 'ponto': '_MUNDO_', 'valor': True}
+    DS.upsert(data, idx="doc_id")
+
+
 DS = Persist()
 
 
@@ -169,11 +177,12 @@ if __name__ == '__main__':
     # Persist().load_item(None)
     # its = populate()
     # DS.save_all(its)
-    _dct = DS.load_all()
-    [pprint({_lt: _it}) for _lt, _it in _dct.items()]
+    # _dct = DS.load_all()
+    # [pprint({_lt: _it}) for _lt, _it in _dct.items()]
     # print(DS.db.create_index([('pid', pymongo.ASCENDING)]))
     # [pprint(it) for it in DS.db.find()]
     # Persist().load_item(dict(oid="task11"))
     # Persist().save_all(populate())
     # atlas_up()
     # local_up()
+    game_populate()

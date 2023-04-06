@@ -16,7 +16,9 @@
           integrity="sha512-SzlrxWUlpfuzQ+pcUCosxcglQRNAq/DZjVsC0lE40xsADsfeQoEypE+enwcOiGjk/bSuGGKHEyjSoQ1zVisanQ=="
           crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="shortcut icon" href="/image/favico.ico" type="image/x-icon"/>
-        <script type="text/javascript" src="https://cdn.rawgit.com/brython-dev/brython/3.3.1/www/src/brython.js"></script>
+        <script type="text/javascript" src="https://unpkg.com/brython@3.5.0/brython.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/brython@3.5.0/brython_stdlib.js"></script>
+<!--        <script type="text/javascript" src="https://cdn.rawgit.com/brython-dev/brython/3.3.1/www/src/brython.js"></script>-->
 <!--    <script type="text/javascript" src="https://cdn.rawgit.com/brython-dev/brython/3.8.0/www/src/brython.js">-->
 <!--    </script>-->
 <!--    <script type="text/javascript" src="https://cdn.rawgit.com/brython-dev/brython/3.8.0/www/src/brython_stdlib.js">-->
@@ -26,7 +28,7 @@
 <body bgcolor="#003333" onload="brython({debug: 1})">
 <script type="text/python">
         # This file is part of  program Alite
-        # Copyright © 2022  Carlo Oliveira <carlo@nce.ufrj.br>,
+        # Copyright © 2023  Carlo Oliveira <carlo@nce.ufrj.br>,
         # `Labase <http://labase.selfip.org/>`__; `GPL <http://is.gd/3Udt>`__.
         # SPDX-License-Identifier: (GPLv3-or-later AND LGPL-2.0-only) WITH bison-exception
         from browser import document, alert, html, window, ajax, timer, svg
