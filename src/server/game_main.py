@@ -34,7 +34,7 @@ from typing import Optional, Awaitable
 from tornado.web import Application, RequestHandler, StaticFileHandler
 from tornado.ioloop import IOLoop
 import json
-# from atlas_model import DS
+# from model import DS
 
 
 class LitHandler(RequestHandler):
