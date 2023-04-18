@@ -27,6 +27,7 @@ Changelog
 
 .. versionadded::    23.04
         initial version (13).
+        nested architecture (18).
 
 """
 from dataclasses import dataclass, asdict
@@ -50,9 +51,7 @@ class MongoDataclass:
 
 @dataclass
 class Score(MongoDataclass):
-    game: str = ""
-    goal: int = 0
-    trial: int = 0
+    trial_id: int = 0
     marker: str = 0
     slot: str = ""
     move: str = ""
@@ -61,6 +60,27 @@ class Score(MongoDataclass):
     score: float = 0.0
     time: datetime = ""
     result: str = ""
+
+
+@dataclass
+class Trial(MongoDataclass):
+    name: str = ""
+    goal_id = str = ""
+    score: list[Score] = ()
+
+
+@dataclass
+class Goal(MongoDataclass):
+    name: str = ""
+    game_id = str = ""
+    trial: list[Trial] = ()
+
+
+@dataclass
+class Game(MongoDataclass):
+    game: str = ""
+    player_id = str = ""
+    goal: list[Goal] = ()
 
 
 @dataclass
@@ -73,4 +93,4 @@ class Registry(MongoDataclass):
     private: bool = False
     begin: datetime = ""
     end: datetime = ""
-    games: list = ()
+    games: list[Game] = ()
