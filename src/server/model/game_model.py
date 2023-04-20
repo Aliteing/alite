@@ -64,8 +64,7 @@ class Score(MongoDataclass):
 
 @dataclass
 class Trial(MongoDataclass):
-    name: str = ""
-    goal_id = str = ""
+    game_id = str = ""
     score: list[Score] = ()
 
 
@@ -80,11 +79,11 @@ class Goal(MongoDataclass):
 class Game(MongoDataclass):
     game: str = ""
     player_id = str = ""
-    goal: list[Goal] = ()
+    goal: list[list[str]] = ()
 
 
 @dataclass
-class Registry(MongoDataclass):
+class Player(MongoDataclass):
     name: str = ""
     school: str = ""
     year: int = 0
