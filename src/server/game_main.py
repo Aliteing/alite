@@ -26,6 +26,7 @@ Changelog
 ---------
 .. versionadded::    23.04
         open a user register window, receive score in json (06).
+        reroute restore/gameid to restore/oid (20).
 
 """
 import os
@@ -38,6 +39,7 @@ import json
 
 
 class LitHandler(RequestHandler):
+    """Just implements abstract data_received"""
     def data_received(self, chunk: bytes) -> Optional[Awaitable[None]]:
         pass
 
@@ -55,7 +57,7 @@ class Score(LitHandler):
         session_id = str(uuid.uuid4().fields[-1])[:9]
         self.write(session_id)
 
-    def post(self, *_):
+    def post(self, **_):
         # fields = json.loads(self.request.body)
         # _fields = str(self.request.body, "utf8")
         data = json.loads(self.request.body.decode('utf-8'))
@@ -96,7 +98,7 @@ def make_app():
     urls = [
         ("/", MainPage),
         ("/home/save", Home),
-        ("/record/getid", Score),
+        (r"/record/oid", Score),
         ("/record/store", Score),
         (r"/home/(.*\.py)", StaticFileHandler,  {'path': static_path}),
         (r"/home/assets/(.*\.png)", StaticFileHandler,  {'path': assets_path}),

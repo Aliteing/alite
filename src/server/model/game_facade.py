@@ -27,18 +27,16 @@ Changelog
 
 .. versionadded::    23.04
         adjust code to game persist (19).
+        retrieve load_all as a list (20).
 
 """
-from pprint import pprint
-
 import pymongo
 from pymongo import UpdateOne
 
 
-def init(passwd, data_base="alite_game", collection="score"):
+def init(passwd, data_base="alite_game", collection="score", db_url="alitelabase.b1lm6fr.mongodb.net"):
     username = "carlotolla9"
     print("ALITE", passwd)
-    db_url = "alitelabase.b1lm6fr.mongodb.net"
     con_string = f"mongodb+srv://{username}:{passwd}@{db_url}/?retryWrites=true&w=majority"
     client = pymongo.MongoClient(con_string)
     mydb = client[data_base]
@@ -49,29 +47,12 @@ def init(passwd, data_base="alite_game", collection="score"):
 
 
 class Facade:
-    def __init__(self, data_base="alite_game", collection="score"):
-        self.db = init(get_pass(), data_base=data_base, collection=collection)
+    def __init__(self, data_base="alite_game", collection="score", db=None):
+        self.db = db or init(get_pass(), data_base=data_base, collection=collection)
 
     def load_all(self):
-        # kind = dict(task="task", step="step", LABA="board")
-        def task(oid="", parent_id=None, desc=None, color_id=0, progress=0, _id=0, pid=0,
-                 task_ids=(), tags=(), users=(), calendar=(), comments=(), external_links=()):
-            return dict(oid=str(oid), parent_id=str(parent_id), desc=str(desc), color_id=str(color_id),
-                        progress=progress, _id=str(_id), task_ids=task_ids, tags=tags, users=users,
-                        calendar=calendar, comments=comments, external_links=external_links)
-        def board(oid=None, parent_id="", counter=1, schema_revision="", _id=0, pid=0,
-                  steps_colors=(), tasks_colors=(), task_ids=(), current="", desc=""):
-            return dict(oid=str(oid), parent_id=str(parent_id), desc=str(desc),
-                        _id=str(_id), task_ids=task_ids, steps_colors=steps_colors, schema_revision=schema_revision,
-                        tasks_colors=tasks_colors, counter=counter, current=current)
-        loader = dict(step=task, task=task, boar=board)
-
-        dbt = self.db.find()
-        # return dbt
-        lst = [{k: v for k, v in score.items()} for score in dbt]
-        _dict = {args["oid"] if args["oid"][0] in "st" else "board": loader[args["oid"][:4]](**args)
-                 for args in lst if "oid" in args}
-        return _dict
+        dbt = self.db.find({"games": {"$exists": True}})
+        return [ob for ob in dbt]
 
     def load_item(self, item_dict):
         # kind = dict(task="task", step="step", LABA="board")
@@ -82,22 +63,13 @@ class Facade:
     def upsert(self, items, idx="oid", _idx="_id"):
         _ = items.pop(_idx) if _idx in items else None
         ids = items.pop(idx)
-        self.db.update_one({idx: ids}, {'$set': items},  upsert=True)
+        self.db.update_one({idx: ids}, {'$set': items}, upsert=True)
 
     def save_all(self, items, idx="oid", _idx="_id"):
         _ = [data.pop(_idx) for data in items if _idx in items]
-        ids = [data.pop(idx) for data in items]
-        # ids = [data.pop("_id") for data in items]
-        operations = [UpdateOne({idx: idn}, {'$set': data}, upsert=True) for idn, data in zip(ids, items)]
-        # operations = [UpdateOne({"_id": idn}, {'$set': data}, upsert=True) for idn, data in zip(ids, items)]
+        _ids = [data.pop(idx) for data in items]
+        operations = [UpdateOne({idx: idn}, {'$set': data}, upsert=True) for idn, data in zip(_ids, items)]
         self.db.bulk_write(operations)
-
-
-def atlas_up():
-    pst = Facade()
-    dct = pst.load_all()
-
-    [print({dc: dcv}) for dc, dcv in dct.items()]
 
 
 def get_pass():
@@ -123,8 +95,7 @@ def game_populate():
     DS.upsert(data, idx="doc_id")
 
 
-DS = Facade()
-
+DS = None  # Facade()
 
 if __name__ == '__main__':
     # Persist().load_item(None)
