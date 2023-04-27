@@ -28,6 +28,7 @@ Changelog
 .. versionadded::    23.04
         initial version (19).
         improved web and mongo testing (20).
+        test expand item mongo passing (26).
 
 """
 import unittest
@@ -39,15 +40,17 @@ from unittest.mock import Mock
 import game_main as game
 from model.game_facade import Facade
 MONGO = [
-    dict(doc_id=0, games=[1]),
-    dict(doc_id=1, ply_id=0, game=2, score=[[4, 5]]),
-    dict(doc_id=2, ply_id=3, game=1, score=[[6, 7, 8]]),
+    dict(doc_id=0, games=[1, 2]),
+    dict(doc_id=1, ply_id=0, game=2, goal=0, score=[4, 5]),
+    dict(doc_id=2, ply_id=3, game=1, goal=0, score=[6, 7, 8]),
+    # dict(doc_id=1, ply_id=0, game=2, score=[[4, 5]]),
+    # dict(doc_id=2, ply_id=3, game=1, score=[[6, 7, 8]]),
     dict(doc_id=3, games=[2]),
     dict(doc_id=4, ply_id=0, marker=1),
     dict(doc_id=5, ply_id=0, marker=2),
-    dict(doc_id=6, ply_id=3, marker=1),
-    dict(doc_id=7, ply_id=3, marker=2),
-    dict(doc_id=8, ply_id=3, marker=2),
+    dict(doc_id=6, ply_id=3, marker=11),
+    dict(doc_id=7, ply_id=3, marker=12),
+    dict(doc_id=8, ply_id=3, marker=13),
 ]
 
 
@@ -84,7 +87,8 @@ class TestSomeHandler(AsyncHTTPTestCase):
 class TestGameFacade(unittest.TestCase):
     def _init_mongo(self):
         # collection = mongomock.MongoClient()
-        collection = mongomock.MongoClient().db.collection
+        collection = mongomock.MongoClient().db.create_collection('score')
+        # collection = mongomock.MongoClient().db.collection
         objects = MONGO
         # objects = [dict(doc_id=0, games=1), dict(doc_id=0, game=2), dict(doc_id=0, game=1), dict(doc_id=0, games=2)]
         collection.insert_many(objects)
@@ -109,6 +113,15 @@ class TestGameFacade(unittest.TestCase):
         found = self.facade.load_item(dict(doc_id=0))
         # found = collection.find({"games": {"$exists": True}})
         self.assertEqual(0, found['doc_id'], f"found: {found}")
+
+    def test_expand_one_player(self):
+        self._init_mongo()
+
+        found = self.facade.expand_item(0)
+        # found = collection.find({"games": {"$exists": True}})
+        fnd = str([fn for fn in found])
+        as_str = "'score': [{'marker': 11}, {'marker': 12}, {'marker': 13}]"
+        self.assertIn(as_str, fnd, f"found: {fnd}")
 
 
 if __name__ == '__main__':

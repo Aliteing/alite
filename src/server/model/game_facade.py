@@ -28,6 +28,7 @@ Changelog
 .. versionadded::    23.04
         adjust code to game persist (19).
         retrieve load_all as a list (20).
+        expand item aggregate working (26)
 
 """
 import pymongo
@@ -54,6 +55,23 @@ class Facade:
         dbt = self.db.find({"games": {"$exists": True}})
         return [ob for ob in dbt]
 
+    def load_player(self, oid):
+        # kind = dict(task="task", step="step", LABA="board")
+        query = [{'$lookup':
+                      {'from': 'models',
+                       'localField': 'oid',
+                       'foreignField': 'ply_id',
+                       'as': 'score'}},
+                 {'$unwind': '$score'},
+                 {'$match': {'oid': oid}},
+                 {'$project':
+                      {'authors': 1, 'cellmodels.celltypes': 1}}
+                 ]
+        # dbt = self.db.find_one(filter={"oid": oid}) if item_dict else self.db.find_one()
+        dbt = self.db.find_one(filter={"oid": oid}) or self.db.find_one()
+        print("dbt", dbt)
+        return dbt
+
     def load_item(self, item_dict):
         # kind = dict(task="task", step="step", LABA="board")
         dbt = self.db.find_one(filter=item_dict) if item_dict else self.db.find_one()
@@ -70,6 +88,81 @@ class Facade:
         _ids = [data.pop(idx) for data in items]
         operations = [UpdateOne({idx: idn}, {'$set': data}, upsert=True) for idn, data in zip(_ids, items)]
         self.db.bulk_write(operations)
+
+    def expand_item(self, oid):
+        aggregate = [
+            {
+                '$match': {
+                    'doc_id': oid
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'score',
+                    'localField': 'games',
+                    'foreignField': 'doc_id',
+                    'as': 'games'
+                }
+            },
+            {
+                '$unwind': '$games'
+            },
+            {
+                '$group': {
+                    '_id': '$_id',
+                    'products': {
+                        '$push': '$games'
+                    }
+                }
+            }
+        ]
+        aggregate1 = [
+            {
+                '$match': {
+                    'doc_id': oid
+                }
+            },
+            {
+                '$unwind': "$games"
+            },
+            {
+                '$lookup': {
+                    'from': 'score',
+                    'localField': 'games',
+                    'foreignField': 'doc_id',
+                    'as': 'games'
+                }
+            },
+            {
+                '$unwind': "$games.0.score"
+            },
+            {
+                '$lookup': {
+                    'from': 'score',
+                    'localField': 'games.0.score',
+                    'foreignField': 'doc_id',
+                    'as': 'scorer'
+                }
+            },
+            {
+                '$group': {
+                    '_id': {
+                        '_id': '$_id',
+                        'doc_id': '$doc_id',
+                        'game': '$games.0.game',
+                        'goal': '$games.0.goal',
+                    },
+                    'score': {'$push': '$scorer.0'}
+                }
+            }
+        ]
+        result = self.db.aggregate(aggregate1)
+
+        def scorer(sco):
+            return [{k: v for k, v in sc.items() if k in "marker"} for sc in sco]
+        result = [{k if k != "_id" else "game_goal": (v['game'], v['goal']) if k == "_id" else scorer(v)
+                   for k, v in gm.items()} for gm in result]
+        return result
 
 
 def get_pass():
