@@ -29,6 +29,7 @@ Changelog
         initial version (19).
         improved web and mongo testing (20).
         test expand item mongo passing (26).
+        add score and add game passing (27).
 
 """
 import unittest
@@ -121,6 +122,35 @@ class TestGameFacade(unittest.TestCase):
         # found = collection.find({"games": {"$exists": True}})
         fnd = str([fn for fn in found])
         as_str = "'score': [{'marker': 11}, {'marker': 12}, {'marker': 13}]"
+        self.assertIn(as_str, fnd, f"found: {fnd}")
+
+    def test_add_score(self):
+        self._init_mongo()
+        self.facade.score(items=dict(doc_id=1, marker=14), score_id=1000)
+        gamer = self.facade.load_item(dict(doc_id=1))
+        as_str = "'score': [4, 5, 1000]"
+        self.assertIn(as_str, str(gamer), f"found: {gamer}")
+        gamer = self.facade.load_item(dict(doc_id=1000))
+        as_str = "'marker': 14"
+        self.assertIn(as_str, str(gamer), f"found: {gamer}")
+        found = self.facade.expand_item(0)
+        fnd = str([fn for fn in found])
+        as_str = "'score': [{'marker': 1}, {'marker': 2}, {'marker': 14}]"
+        self.assertIn(as_str, fnd, f"found: {fnd}")
+
+    def test_add_game(self):
+        self._init_mongo()
+        self.facade.score(items=dict(doc_id=0, ply_id=3, game=3, goal=0, score=()), score_id=3000, array='games')
+        self.facade.score(items=dict(doc_id=3000, marker=15), score_id=4000)
+        gamer = self.facade.load_item(dict(doc_id=0))
+        as_str = "'games': [1, 2, 3000]"
+        self.assertIn(as_str, str(gamer), f"found: {gamer}")
+        gamer = self.facade.load_item(dict(doc_id=3000))
+        as_str = "'game': 3"
+        self.assertIn(as_str, str(gamer), f"found: {gamer}")
+        found = self.facade.expand_item(0)
+        fnd = str([fn for fn in found])
+        as_str = "'game_goal': (3, 0)"
         self.assertIn(as_str, fnd, f"found: {fnd}")
 
 
