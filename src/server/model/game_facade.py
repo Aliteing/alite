@@ -25,6 +25,9 @@
 Changelog
 ---------
 
+.. versionadded::    23.05
+        redefine doc_id into _id (03).
+
 .. versionadded::    23.04
         adjust code to game persist (19).
         retrieve load_all as a list (20).
@@ -58,11 +61,11 @@ class Facade:
 
     def load_player(self, oid):
         # kind = dict(task="task", step="step", LABA="board")
-        _ = [{'$lookup':
-              {'from': 'models',
-               'localField': 'oid',
-               'foreignField': 'ply_id',
-               'as': 'score'}},
+        _ = [{'$lookup': {
+                   'from': 'models',
+                   'localField': 'oid',
+                   'foreignField': 'ply_id',
+                   'as': 'score'}},
              {'$unwind': '$score'},
              {'$match': {'oid': oid}},
              {'$project': {'authors': 1, 'cellmodels.celltypes': 1}}
@@ -84,32 +87,92 @@ class Facade:
         self.db.update_one({idx: ids}, {op: items}, upsert=True)
         return ids
 
+    # def expand_item(self, oid):
+    #     aggregate1 = [
+    #         {
+    #             '$match': {
+    #                 'doc_id': oid
+    #             }
+    #         },
+    #         {
+    #             '$unwind': "$games"
+    #         },
+    #         {
+    #             '$lookup': {
+    #                 'from': 'score',
+    #                 'localField': 'games',
+    #                 'foreignField': 'doc_id',
+    #                 'as': 'games'
+    #             }
+    #         },
+    #         {
+    #             '$unwind': "$games.0.score"
+    #         },
+    #         {
+    #             '$lookup': {
+    #                 'from': 'score',
+    #                 'localField': 'games.0.score',
+    #                 'foreignField': 'doc_id',
+    #                 'as': 'scorer'
+    #             }
+    #         },
+    #         {
+    #             '$group': {
+    #                 '_id': {
+    #                     '_id': '$_id',
+    #                     'doc_id': '$doc_id',
+    #                     'game': '$games.0.game',
+    #                     'goal': '$games.0.goal',
+    #                 },
+    #                 'score': {'$push': '$scorer.0'}
+    #             }
+    #         }
+    #     ]
+    #     result = self.db.aggregate(aggregate1)
+    #
+    #     def scorer(sco):
+    #         return [{k: v for k, v in sc.items() if k not in "ply_id _id doc_id"} for sc in sco]
+    #
+    #     result = [{k if k != "_id" else "game_goal": (v['game'], v['goal']) if k == "_id" else scorer(v)
+    #                for k, v in gm.items()} for gm in result]
+    #     return result
+
     def expand_item(self, oid):
         aggregate1 = [
             {
                 '$match': {
-                    'doc_id': oid
+                    '_id': oid
                 }
             },
             {
-                '$unwind': "$games"
+                '$unwind': {
+                    'path': '$games',
+                    'preserveNullAndEmptyArrays': True
+                }
+            },
+            {
+                '$unwind': {
+                    'path': '$games.goals',
+                    'preserveNullAndEmptyArrays': True
+                }
+            },
+            {
+                '$unwind': {
+                    'path': '$games.goals.trials',
+                    'preserveNullAndEmptyArrays': True
+                }
+            },
+            {
+                '$unwind': {
+                    'path': '$games.goals.trials.trial',
+                    'preserveNullAndEmptyArrays': True
+                }
             },
             {
                 '$lookup': {
                     'from': 'score',
-                    'localField': 'games',
-                    'foreignField': 'doc_id',
-                    'as': 'games'
-                }
-            },
-            {
-                '$unwind': "$games.0.score"
-            },
-            {
-                '$lookup': {
-                    'from': 'score',
-                    'localField': 'games.0.score',
-                    'foreignField': 'doc_id',
+                    'localField': 'games.goals.trials.trial',
+                    'foreignField': '_id',
                     'as': 'scorer'
                 }
             },
@@ -117,21 +180,21 @@ class Facade:
                 '$group': {
                     '_id': {
                         '_id': '$_id',
-                        'doc_id': '$doc_id',
-                        'game': '$games.0.game',
-                        'goal': '$games.0.goal',
+                        'name': '$name',
+                        'game': '$games.game',
+                        'goal': '$games.goal.$',
                     },
-                    'score': {'$push': '$scorer.0'}
+                    'trial': {'$push': '$scorer.score'}
                 }
             }
         ]
         result = self.db.aggregate(aggregate1)
 
-        def scorer(sco):
-            return [{k: v for k, v in sc.items() if k not in "ply_id _id doc_id"} for sc in sco]
+        # def scorer(sco):
+        #     return [{k: v for k, v in sc.items() if k not in "ply_id _id doc_id"} for sc in sco]
 
-        result = [{k if k != "_id" else "game_goal": (v['game'], v['goal']) if k == "_id" else scorer(v)
-                   for k, v in gm.items()} for gm in result]
+        # result = [{k if k != "_id" else "game_goal": (v['game'], v['goal']) if k == "_id" else scorer(v)
+        #            for k, v in gm.items()} for gm in result]
         return result
 
     def score(self, items, score_id=None, idx="doc_id", array='score'):
