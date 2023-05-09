@@ -27,6 +27,7 @@ Changelog
 
 .. versionadded::    23.05
         redefine doc_id into _id (03).
+        add score & add_game (09).
 
 .. versionadded::    23.04
         adjust code to game persist (19).
@@ -183,6 +184,7 @@ class Facade:
                         'name': '$name',
                         'game': '$games.game',
                         'goal': '$games.goal.$',
+                        'trial': '$games.goal.$.trials',
                     },
                     'trial': {'$push': '$scorer.score'}
                 }
@@ -197,15 +199,11 @@ class Facade:
         #            for k, v in gm.items()} for gm in result]
         return result
 
-    def score(self, items, score_id=None, idx="doc_id", array='score'):
-        session_id = str(uuid.uuid4().fields[-1])[:9]
-        score_id = score_id or session_id
-        scorer = items.pop(idx)
-        score_identifier = {idx: scorer, array: score_id}
-        self.upsert(score_identifier, op="$push")
-        items.update({idx: score_id})
-        self.upsert(items)
-        return score_id
+    def add_game(self, person, game):
+        self.db.update_one({'_id': person}, {'$push': {'games': dict(game=game, goals=())}}, upsert=True)
+
+    def score(self, items, score_id=None):
+        self.db.update_one({'_id': score_id}, {'$push': {'score': items}}, upsert=True)
 
 
 def get_pass():

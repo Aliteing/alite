@@ -27,6 +27,7 @@ Changelog
 
 .. versionadded::    23.05
         redefine doc_id into _id (03).
+        added test for goal, trials, trial (09).
 
 .. versionadded::    23.04
         initial version (19).
@@ -58,9 +59,9 @@ MONG_ = [
 ]
 
 MONGO = [
-    dict(name=0, games=[dict(game=2, goals=[dict(trials=(dict(trial=())))])]),
-    dict(name=1, games=[dict(game=2, goals=[dict(trials=(dict(trial=())))])]),
-    dict(name=2, games=[dict(game=1, goals=[dict(trials=(dict(trial=())))])]),
+    dict(name=0, games=[dict(game=2, goals=[dict(trials=(dict(trial=()),))])]),
+    dict(name=1, games=[dict(game=2, goals=[dict(trials=(dict(trial=()),))])]),
+    dict(name=2, games=[dict(game=1, goals=[dict(trials=(dict(trial=()),))])]),
     dict(score=(dict(marker=1), dict(marker=2),)),
     dict(score=(dict(marker=21), dict(marker=22),)),
     dict(score=(dict(marker=11), dict(marker=12), dict(marker=13),)),
@@ -120,7 +121,7 @@ class TestGameFacade(unittest.TestCase):
         print('len(person), len(score), len(populate)', len(person), len(score), len(populate))
         [print(sc[0]) for sc in populate]
 
-        [collection.update_one({'_id': ids}, {'$push': {'games.0.goals.0.trials.trial': item['_id']}}, upsert=True)
+        [collection.update_one({'_id': ids}, {'$push': {'games.0.goals.0.trials.0.trial': item['_id']}}, upsert=True)
          for ids, items in populate for item in items]
 
         self.facade = Facade(db=collection)
@@ -158,11 +159,7 @@ class TestGameFacade(unittest.TestCase):
     def test_add_score(self):
         self._init_mongo()
         scorer = self.score[0]
-        # self.facade.upsert(items=dict(_id=scorer, score=dict(marker=22)), idx="_id", op="$push")  # re_id=1000)
-        self.facade.db.update_one({'_id': scorer}, {'$push': {'score': dict(marker=22)}}, upsert=True)
-        # self.facade.db.update_one({'_id': scorer}, {'$push': {'score': dict(marker=22)}}, upsert=True)
-
-        # self.facade.score(items=dict(_id=scorer, marker=22), idx="_id", score_id=scorer)  # re_id=1000)
+        self.facade.score(dict(marker=22), scorer)
         gamer = self.facade.load_item(dict(_id=scorer))
         as_str = "'score': [{'marker': 1}, {'marker': 2}, {'marker': 22}"
         self.assertIn(as_str, str(gamer), f"found: {gamer}")
@@ -173,17 +170,51 @@ class TestGameFacade(unittest.TestCase):
 
     def test_add_game(self):
         self._init_mongo()
-        self.facade.score(items=dict(doc_id=0, ply_id=3, game=3, goal=0, score=()), score_id=3000, array='games')
-        self.facade.score(items=dict(doc_id=3000, marker=15), score_id=4000)
-        gamer = self.facade.load_item(dict(doc_id=0))
-        as_str = "'games': [1, 2, 3000]"
-        self.assertIn(as_str, str(gamer), f"found: {gamer}")
-        gamer = self.facade.load_item(dict(doc_id=3000))
-        as_str = "'game': 3"
-        self.assertIn(as_str, str(gamer), f"found: {gamer}")
-        found = self.facade.expand_item(0)
+        person = self.person[0]
+        self.facade.add_game(person=person, game=3)  # dict(game=3, goals=())})
+        gamer = self.facade.load_item(dict(_id=person))
+        self.assertEqual(person, gamer["_id"], f"found gamer: {gamer}, person: {person}")
+        as_str = "'game': 3, 'goals': []"
+        self.assertIn(as_str, str(gamer), f"found: {gamer['games']}")
+        found = self.facade.expand_item(person)
         fnd = str([fn for fn in found])
-        as_str = "'game_goal': (3, 0)"
+        as_str = "'name': 0, 'game': 3"
+        self.assertIn(as_str, fnd, f"found: {fnd}")
+
+    def _add_goal(self):
+        self._init_mongo()
+        person = self.person[0]
+        trials = {'trials': [{'trial': ()}]}
+        self.facade.db.update_one({'_id': person}, {'$push': {'games': dict(game=3, goals=())}}, upsert=True)
+        self.facade.db.update_one({'_id': person}, {'$push': {'games.0.goals': trials}}, upsert=True)
+        self.facade.db.update_one({'_id': person}, {'$push': {'games.1.goals': trials}}, upsert=True)
+        return person
+
+    def test_add_goal(self):
+        person = self._add_goal()
+        gamer = self.facade.load_item(dict(_id=person))
+        as_str = "{'trials': [{'trial': []}]}]}, {'game': 3, 'goals': [{'trials': [{'trial': []}]}]}"
+        self.assertIn(as_str, str(gamer), f"found: {gamer['games']}")
+        found = self.facade.expand_item(person)
+        fnd = str([fn for fn in found])
+        as_str = "'name': 0, 'game': 2}}, {'trial': [[]]"
+        self.assertIn(as_str, fnd, f"found: {fnd}")
+
+    def test_add_trial(self):
+        person = self._add_goal()
+        trial = {'trial': ()}
+        self.facade.db.update_one({'_id': person}, {'$push': {'games.0.goals.1.trials': trial}}, upsert=True)
+        oid = self.facade.db.insert_one(document=dict(score=[dict(marker=1234)]))
+        # self.assertEqual(0, str(oid))
+        self.facade.db.update_one(
+            {'_id': person}, {'$push': {'games.0.goals.1.trials.1.trial': oid.inserted_id}}, upsert=True)
+        gamer = self.facade.load_item(dict(_id=person))
+        as_str = ("{'trial': [ObjectId('" + str(oid.inserted_id) +
+                  "')]}]}]}, {'game': 3, 'goals': [{'trials': [{'trial': []}]}]}]")
+        self.assertIn(as_str, str(gamer), f"found: {gamer['games']}")
+        found = self.facade.expand_item(person)
+        fnd = str([fn for fn in found])
+        as_str = str([dict(marker=1234)])
         self.assertIn(as_str, fnd, f"found: {fnd}")
 
 
