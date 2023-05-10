@@ -28,6 +28,7 @@ Changelog
 .. versionadded::    23.05
         redefine doc_id into _id (03).
         add score & add_game (09).
+        refactor session & expand format (10).
 
 .. versionadded::    23.04
         adjust code to game persist (19).
@@ -63,14 +64,14 @@ class Facade:
     def load_player(self, oid):
         # kind = dict(task="task", step="step", LABA="board")
         _ = [{'$lookup': {
-                   'from': 'models',
-                   'localField': 'oid',
-                   'foreignField': 'ply_id',
-                   'as': 'score'}},
-             {'$unwind': '$score'},
-             {'$match': {'oid': oid}},
-             {'$project': {'authors': 1, 'cellmodels.celltypes': 1}}
-             ]
+            'from': 'models',
+            'localField': 'oid',
+            'foreignField': 'ply_id',
+            'as': 'score'}},
+            {'$unwind': '$score'},
+            {'$match': {'oid': oid}},
+            {'$project': {'authors': 1, 'cellmodels.celltypes': 1}}
+        ]
         # dbt = self.db.find_one(filter={"oid": oid}) if item_dict else self.db.find_one()
         dbt = self.db.find_one(filter={"oid": oid}) or self.db.find_one()
         print("dbt", dbt)
@@ -88,56 +89,6 @@ class Facade:
         self.db.update_one({idx: ids}, {op: items}, upsert=True)
         return ids
 
-    # def expand_item(self, oid):
-    #     aggregate1 = [
-    #         {
-    #             '$match': {
-    #                 'doc_id': oid
-    #             }
-    #         },
-    #         {
-    #             '$unwind': "$games"
-    #         },
-    #         {
-    #             '$lookup': {
-    #                 'from': 'score',
-    #                 'localField': 'games',
-    #                 'foreignField': 'doc_id',
-    #                 'as': 'games'
-    #             }
-    #         },
-    #         {
-    #             '$unwind': "$games.0.score"
-    #         },
-    #         {
-    #             '$lookup': {
-    #                 'from': 'score',
-    #                 'localField': 'games.0.score',
-    #                 'foreignField': 'doc_id',
-    #                 'as': 'scorer'
-    #             }
-    #         },
-    #         {
-    #             '$group': {
-    #                 '_id': {
-    #                     '_id': '$_id',
-    #                     'doc_id': '$doc_id',
-    #                     'game': '$games.0.game',
-    #                     'goal': '$games.0.goal',
-    #                 },
-    #                 'score': {'$push': '$scorer.0'}
-    #             }
-    #         }
-    #     ]
-    #     result = self.db.aggregate(aggregate1)
-    #
-    #     def scorer(sco):
-    #         return [{k: v for k, v in sc.items() if k not in "ply_id _id doc_id"} for sc in sco]
-    #
-    #     result = [{k if k != "_id" else "game_goal": (v['game'], v['goal']) if k == "_id" else scorer(v)
-    #                for k, v in gm.items()} for gm in result]
-    #     return result
-
     def expand_item(self, oid):
         aggregate1 = [
             {
@@ -152,29 +103,21 @@ class Facade:
                 }
             },
             {
-                '$unwind': {
-                    'path': '$games.goals',
-                    'preserveNullAndEmptyArrays': True
-                }
-            },
-            {
-                '$unwind': {
-                    'path': '$games.goals.trials',
-                    'preserveNullAndEmptyArrays': True
-                }
-            },
-            {
-                '$unwind': {
-                    'path': '$games.goals.trials.trial',
-                    'preserveNullAndEmptyArrays': True
-                }
-            },
-            {
                 '$lookup': {
                     'from': 'score',
-                    'localField': 'games.goals.trials.trial',
+                    'localField': 'games.score',
                     'foreignField': '_id',
                     'as': 'scorer'
+                }
+            },
+            {
+                '$project': {
+                    'name': '$name',
+                    'all': {
+                        "game": "$games.game",
+                        "goal": "$games.goal",
+                        "trial": "$games.trial",
+                        'scorer': {'$ifNull': ['$scorer.0.score', []]}}
                 }
             },
             {
@@ -182,11 +125,8 @@ class Facade:
                     '_id': {
                         '_id': '$_id',
                         'name': '$name',
-                        'game': '$games.game',
-                        'goal': '$games.goal.$',
-                        'trial': '$games.goal.$.trials',
                     },
-                    'trial': {'$push': '$scorer.score'}
+                    'games': {'$push': '$all'}
                 }
             }
         ]
@@ -199,8 +139,9 @@ class Facade:
         #            for k, v in gm.items()} for gm in result]
         return result
 
-    def add_game(self, person, game):
-        self.db.update_one({'_id': person}, {'$push': {'games': dict(game=game, goals=())}}, upsert=True)
+    def add_game(self, person, game, goal=0, trial=0):
+        self.db.update_one({'_id': person},
+                           {'$push': {'games': dict(game=game, goal=goal, trial=trial, scorer=())}}, upsert=True)
 
     def score(self, items, score_id=None):
         self.db.update_one({'_id': score_id}, {'$push': {'score': items}}, upsert=True)
