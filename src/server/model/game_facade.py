@@ -83,6 +83,10 @@ class Facade:
         # print("dbt", dbt)
         return dbt
 
+    def insert(self, items):
+        ids = self.db.insert_one(items)
+        return ids.inserted_id
+
     def upsert(self, items, idx="doc_id", _idx="_id", op="$set"):
         _ = items.pop(_idx) if _idx in items else None
         ids = items.pop(idx) if idx in items else str(uuid.uuid4().fields[-1])[:9]

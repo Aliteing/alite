@@ -28,6 +28,7 @@ Changelog
 .. versionadded::    23.05
         redefine doc_id into _id (03).
         added test for goal, trials, trial (09).
+        added test for user, game, score (10).
 
 .. versionadded::    23.04
         initial version (19).
@@ -166,6 +167,19 @@ class TestGameFacade(unittest.TestCase):
         as_str = "'scorer': [{'marker': 11}, {'marker': 12}, {'marker': 13}]"
         self.assertIn(as_str, fnd, f"found: {fnd}")
 
+    def test_add_user(self):
+        self._init_mongo()
+        oid = self.facade.insert(dict(name=321, games=()))
+        gamer = self.facade.load_item(dict(_id=oid))
+        as_str = "'name': 321, 'games': []"
+        self.assertIn(as_str, str(gamer), f"found: {gamer}")
+        self._add_game(oid)
+        found = self.facade.expand_item(oid)
+        fnd = str([fn for fn in found])
+        games = "[{'game': 3, 'goal': 0, 'trial': 0, 'scorer': []}]"
+        as_str = f"[{{'games': {games}, '_id': {{'_id': ObjectId('{str(oid)}'), 'name': 321}}}}]"
+        self.assertIn(as_str, fnd, f"found: {fnd}")
+
     def test_add_score(self):
         self._init_mongo()
         scorer = self.score[0]
@@ -178,14 +192,17 @@ class TestGameFacade(unittest.TestCase):
         as_str = "'scorer': [{'marker': 1}, {'marker': 2}, {'marker': 22}]"
         self.assertIn(as_str, fnd, f"found: {fnd}")
 
-    def test_add_game(self):
-        self._init_mongo()
-        person = self.person[0]
-        self.facade.add_game(person=person, game=3)  # dict(game=3, goals=())})
+    def _add_game(self, person, game_id=3):
+        self.facade.add_game(person=person, game=game_id)  # dict(game=3, goals=())})
         gamer = self.facade.load_item(dict(_id=person))
         self.assertEqual(person, gamer["_id"], f"found gamer: {gamer}, person: {person}")
         as_str = "{'game': 3, 'goal': 0, 'trial': 0, 'scorer': []}"
         self.assertIn(as_str, str(gamer), f"found in games: {gamer['games']}")
+
+    def test_add_game(self):
+        self._init_mongo()
+        person = self.person[0]
+        self._add_game(person)
         found = self.facade.expand_item(person)
         fnd = str([fn for fn in found])
         as_str = "{'game': 3, 'goal': 0, 'trial': 0, 'scorer': []}"
