@@ -24,9 +24,12 @@
 
 Changelog
 ---------
+.. versionadded::    23.05
+        use ds for web requests, migrate Main to Home (10).
+
 .. versionadded::    23.04
         open a user register window, receive score in json (06).
-        reroute restore/gameid to restore/oid (20).
+        reroute restore/game id to restore/oid (20).
 
 """
 import os
@@ -39,6 +42,7 @@ import json
 
 
 class LitHandler(RequestHandler):
+    ds = None
     """Just implements abstract data_received"""
     def data_received(self, chunk: bytes) -> Optional[Awaitable[None]]:
         pass
@@ -47,7 +51,17 @@ class LitHandler(RequestHandler):
 class MainPage(LitHandler):
 
     def get(self):
-        self.render("home.html", titulo="Alite - Games", version="23.04")
+        self.render("home.html", titulo="Alite - Games", version="23.05")
+
+    def post(self, **_):
+        data = json.loads(self.request.body.decode('utf-8'))
+        print('Got USER POST JSON data:', data)
+        fields = self.request.body_arguments
+        fields = {k: self.get_argument(k) for k in fields}
+        fields_ = json.dumps(fields)
+        print("user post", fields_, data, "*", _)
+        session_id = LitHandler.ds.insert(fields)
+        self.write(str(session_id))
 
 
 class Score(LitHandler):
@@ -58,46 +72,47 @@ class Score(LitHandler):
         self.write(session_id)
 
     def post(self, **_):
-        # fields = json.loads(self.request.body)
-        # _fields = str(self.request.body, "utf8")
+        """Add a new game"""
         data = json.loads(self.request.body.decode('utf-8'))
-        print('Got JSON data:', data)
-        # _fields = {k: v for pair in _fields.split('&') for k, v in pair.split("=") if pair}
-        # _fields = dict([pair.split("=") for pair in _fields.split('&')])
-        fields = self.request.body_arguments
-        fields = {k: self.get_argument(k) for k in fields}
-        # fields = {k: str(v[0], "utf8") for k, v in fields.items()}
-        fields = json.dumps(fields)
-        print("score post", fields, data, "*", _)
+        person, game = data['person'], data['game']
+        # print('Got POST JSON data:', data, person, game)
+        session_id = LitHandler.ds.add_game(person=person, game=game)
+        self.write(str(session_id))
+
+    def put(self, **_):
+        """Put a new score."""
+        data = json.loads(self.request.body.decode('utf-8'))
+        game, score = data['game'], data['score']
+        # print('Got PUT JSON data:', data)
+        session_id = LitHandler.ds.score(score_id=game, items=score)
+        self.write(str(session_id))
 
 
 class Home(LitHandler):
 
     def get(self):
-        import uuid
-        session_id = str(uuid.uuid4().fields[-1])[:9]
-        self.write(session_id)
+        self.render("home.html", titulo="Alite - Games", version="23.05")
 
-    def post(self, *_):
-        # fields = json.loads(self.request.body)
-        fields = self.request.arguments
-        fields = {k: str(v[0], "utf8") for k, v in fields.items()}
-        fields = json.dumps(fields)
-        print("home post", fields)
-        self.render("game.html", titulo="Alite - Games", version="23.04")
+    def post(self, **_):
+        """Add a new user."""
+        data = json.loads(self.request.body.decode('utf-8'))
+        # print('Got USER POST JSON data:', data)
+        session_id = LitHandler.ds.insert(data)
+        self.write(str(session_id))
 
 
-def make_app():
+def make_app(ds=None):
+    LitHandler.ds = ds
     current_path = os.path.dirname(__file__)
     assets_path = os.path.join(current_path, "..", "game", "assets")
     static_path = os.path.join(current_path, "..", "game")
     template_path = os.path.join(current_path, "templates")
     image_path = os.path.join(current_path, "image")
-    print(static_path)
+    # print(static_path)
 
     urls = [
-        ("/", MainPage),
-        ("/home/save", Home),
+        ("/", Home),
+        ("/home/user", Home),
         (r"/record/oid", Score),
         ("/record/store", Score),
         (r"/home/(.*\.py)", StaticFileHandler,  {'path': static_path}),

@@ -29,6 +29,7 @@ Changelog
         redefine doc_id into _id (03).
         add score & add_game (09).
         refactor session & expand format (10).
+        fix add game and conform to web call (10).
 
 .. versionadded::    23.04
         adjust code to game persist (19).
@@ -39,6 +40,7 @@ Changelog
 """
 import pymongo
 import uuid
+from bson.objectid import ObjectId
 
 
 def init(passwd, data_base="alite_game", collection="score", db_url="alitelabase.b1lm6fr.mongodb.net"):
@@ -56,6 +58,10 @@ def init(passwd, data_base="alite_game", collection="score", db_url="alitelabase
 class Facade:
     def __init__(self, data_base="alite_game", collection="score", db=None):
         self.db = db or init(get_pass(), data_base=data_base, collection=collection)
+
+    def load_any(self):
+        dbt = self.db.find()
+        return [ob for ob in dbt]
 
     def load_all(self):
         dbt = self.db.find({"games": {"$exists": True}})
@@ -144,11 +150,19 @@ class Facade:
         return result
 
     def add_game(self, person, game, goal=0, trial=0):
+        oid = person if person is ObjectId else ObjectId(person)
+        scorer = self.insert(dict(score=()))
+        self.db.update_one({'_id': oid},
+                           {'$push': {'games': dict(game=game, goal=goal, trial=trial, scorer=[scorer])}}, upsert=True)
+        return scorer
+
+    def add_trial(self, person, game, goal=0, trial=0):
         self.db.update_one({'_id': person},
                            {'$push': {'games': dict(game=game, goal=goal, trial=trial, scorer=())}}, upsert=True)
 
     def score(self, items, score_id=None):
         self.db.update_one({'_id': score_id}, {'$push': {'score': items}}, upsert=True)
+        return score_id
 
 
 def get_pass():

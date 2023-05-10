@@ -29,6 +29,7 @@ Changelog
         redefine doc_id into _id (03).
         added test for goal, trials, trial (09).
         added test for user, game, score (10).
+        web tests for mongomock, fix add_game (10).
 
 .. versionadded::    23.04
         initial version (19).
@@ -37,6 +38,7 @@ Changelog
         add score and add game passing (27).
 
 """
+import json
 import unittest
 import mongomock
 from tornado.testing import AsyncHTTPTestCase, gen_test
@@ -45,19 +47,6 @@ from tornado.httpserver import HTTPRequest
 from unittest.mock import Mock
 import game_main as game
 from model.game_facade import Facade
-MONG_ = [
-    dict(doc_id=0, games=[1, 2]),
-    dict(doc_id=1, ply_id=0, game=2, goal=0, score=[4, 5]),
-    dict(doc_id=2, ply_id=3, game=1, goal=0, score=[6, 7, 8]),
-    # dict(doc_id=1, ply_id=0, game=2, score=[[4, 5]]),
-    # dict(doc_id=2, ply_id=3, game=1, score=[[6, 7, 8]]),
-    dict(doc_id=3, games=[2]),
-    dict(doc_id=4, ply_id=0, marker=1),
-    dict(doc_id=5, ply_id=0, marker=2),
-    dict(doc_id=6, ply_id=3, marker=11),
-    dict(doc_id=7, ply_id=3, marker=12),
-    dict(doc_id=8, ply_id=3, marker=13),
-]
 
 MONGO = [
     dict(name=0, games=[dict(game=2, goal=0, trial=0, scorer=()), dict(game=2, goal=0, trial=1, scorer=())]),
@@ -68,42 +57,51 @@ MONGO = [
     dict(score=(dict(marker=11), dict(marker=12), dict(marker=13))),
     dict(score=(dict(marker=111), dict(marker=112), dict(marker=113))),
 ]
-MONGA = [
-    dict(name=0, games=[dict(game=2, goals=[dict(trials=(dict(trial=()),))])]),
-    dict(name=1, games=[dict(game=2, goals=[dict(trials=(dict(trial=()),))])]),
-    dict(name=2, games=[dict(game=1, goals=[dict(trials=(dict(trial=()),))])]),
-    dict(score=(dict(marker=1), dict(marker=2),)),
-    dict(score=(dict(marker=21), dict(marker=22),)),
-    dict(score=(dict(marker=11), dict(marker=12), dict(marker=13),)),
-    dict(score=(dict(marker=111), dict(marker=112), dict(marker=113),)),
-]
-
-SCORE = [
-    dict(score=(dict(marker=301), dict(marker=302),)),
-    dict(score=(dict(marker=321), dict(marker=322),)),
-    dict(score=(dict(marker=11), dict(marker=412), dict(marker=413),)),
-    dict(score=(dict(marker=111), dict(marker=512), dict(marker=513),)),
-]
 
 
 class TestSomeHandler(AsyncHTTPTestCase):
     def get_app(self):
-        return game.make_app()
+        collection = mongomock.MongoClient().db.create_collection('score')
+        self.db = Facade(db=collection)
+        return game.make_app(ds=self.db)
 
     def test_homepage(self):
         response = self.fetch("/")
         self.assertEqual(200, response.code, "failed retrieve main")
         self.assertIn(b"Jogo Eica - Cadastro", response.body)
 
-    def test_get_game_id(self):
-        response = self.fetch(r"/record/oid")
-        self.assertEqual(200, response.code, "failed retrieve gameid")
-        self.assertEqual(9, len(response.body), "unexpected id size")
+    def test_post_add_game(self):
+        oid = self.db.insert(dict(name=357, games=()))
+        response = self.fetch(r"/record/store", False, method="POST", body=json.dumps(dict(person=str(oid), game=88)))
+        self.assertEqual(200, response.code, "failed add_game")
+        self.assertEqual(24, len(response.body), "unexpected id size")
+        user = str(self.db.load_any())
+        oid = response.body.decode("utf8")
+        # [print(f"obj: {u}") for u in self.db.load_any()]
+        self.assertIn(oid, user, f"oid {oid} not in user {user}")
 
-    def test_post_score(self):
-        response = self.fetch(r"/record/store", False, method="POST", body='{"oid": "123"}')
+    def test_post_user(self):
+        response = self.fetch(r"/home/user", False, method="POST", body=json.dumps(dict(name=321, games=())))
         self.assertEqual(200, response.code, "failed post_score")
-        self.assertEqual(0, len(response.body), "unexpected id size")
+        self.assertEqual(24, len(response.body), "unexpected id size")
+        user = str(self.db.load_any())
+        oid = response.body.decode("utf8")
+        # [print(u) for u in self.db.load_any()]
+        self.assertIn(oid, user, f"oid {oid} not in user {user}")
+
+    def test_put_score(self):
+        oid = self.db.insert(dict(name=246, games=()))
+        gamer = str(self.db.add_game(oid, 99))
+        body = json.dumps(dict(game=gamer, score=dict(marker=2460)))
+        response = self.fetch(r"/record/store", False, method="PUT", body=body)
+        self.assertEqual(200, response.code, "failed put_score")
+        self.assertIn(gamer, str(response.body), "unexpected id size")
+        user = str(self.db.load_any())
+        score = str(dict(marker=2460))
+        oid = response.body.decode("utf8")
+        self.assertIn(oid, user, f"oid {oid} not in user {user}")
+        # [print(u) for u in self.db.load_any()]
+        self.assertIn(score, user, f"oid {score} not in user {user}")
 
     @gen_test
     def __test_no_from_date_param(self):
@@ -128,18 +126,17 @@ class TestGameFacade(unittest.TestCase):
         score = [it for it in collection.find({'score': {'$exists': True}})]
         self.score = [it['_id'] for it in score]
         populate = [(per, score[i: i+1]) for i, per in enumerate(person)]
-        print('len(person), len(score), len(populate)', len(person), len(score), len(populate))
-        [print(sc[0]) for sc in populate]
+        # print('len(person), len(score), len(populate)', len(person), len(score), len(populate))
+        # [print(sc[0]) for sc in populate]
 
         # [collection.update_one({'_id': ids}, {'$push': {'games.0.goals.0.trials.0.trial': item['_id']}}, upsert=True)
         [collection.update_one({'_id': ids}, {'$push': {f'games.{gamer}.score': item['_id']}}, upsert=True)
          for ids, items in populate for gamer, item in enumerate(items)]
 
         self.facade = Facade(db=collection)
-        print(self.facade.load_item(dict(_id=person[0])))
+        # print(self.facade.load_item(dict(_id=person[0])))
 
     def test_list_mongo(self):
-        # collection = mongomock.MongoClient()
         dbs = mongomock.MongoClient(host="0.0.0.0", username="username", password="passwd").list_database_names()
         print("dbs", dbs)
         self.assertEqual(dbs, [])  # add assertion here
@@ -193,10 +190,10 @@ class TestGameFacade(unittest.TestCase):
         self.assertIn(as_str, fnd, f"found: {fnd}")
 
     def _add_game(self, person, game_id=3):
-        self.facade.add_game(person=person, game=game_id)  # dict(game=3, goals=())})
+        scorer = self.facade.add_game(person=person, game=game_id)  # dict(game=3, goals=())})
         gamer = self.facade.load_item(dict(_id=person))
         self.assertEqual(person, gamer["_id"], f"found gamer: {gamer}, person: {person}")
-        as_str = "{'game': 3, 'goal': 0, 'trial': 0, 'scorer': []}"
+        as_str = "{'game': 3, 'goal': 0, 'trial': 0, 'scorer': [ObjectId('%s')]}" % scorer
         self.assertIn(as_str, str(gamer), f"found in games: {gamer['games']}")
 
     def test_add_game(self):
