@@ -19,6 +19,9 @@
 # Você deve ter recebido uma cópia da Licença Pública Geral GNU
 # junto com este programa, se não, veja em <http://www.gnu.org/licenses/>
 """ Main eica client control.
+Programa baseado no Teste Wisconsin
+Autor: Neno Henrique Albernaz
+Criado em Junho de 2008
 
 .. codeauthor:: Carlo Oliveira <carlo@nce.ufrj.br>
 .. codeauthor:: Neno Henrique Albernaz<neno@nce.ufrj.br>
@@ -30,13 +33,15 @@ Changelog
         Port to client interaction(05).
 
 """
-# -*- coding: utf-8 -*-
-"""Programa baseado no Teste Wisconsin
-Autor: Neno Henrique Albernaz
-Criado em Junho de 2008"""
+from browser import document, html
 
+COLORS = 'is-danger is-primary is-warning is-info'.split()
+COLORN = 'verm verd amar azul'.split()
+CLAZZ = {k: v for k, v in zip(COLORN, COLORS)}
+FORM = {k: v for k, v in enumerate("triangulo estrela cruz circulo".split())}
 
 ########################################################################
+
 
 class Carta:
     # Definição dos itens de uma carta.
@@ -60,6 +65,8 @@ class Carta:
         genero = 0 if forma not in [1, 2] else 1
         num = 0 if numero == 1 else 1
 
+        self.numeron = numero
+        self.forman = forma
         self.numero = self._numeros[numero - 1][genero]
         self.forma = self._formas[forma][num]
         self.cor = self._cores[cor][num][genero]
@@ -68,17 +75,43 @@ class Carta:
         self.img = u"/static/plugins/wisconsin/images/%s.png" % self._formas[forma][2]
         self.color = self._cores[cor][2]
 
+    def clicou(self, *_):
+        print(f"testou carta: {self.testaTudoDiferente(listaCartasResposta[0])},"
+              f" vals: {listaCartasResposta[0].color[:4]}")
+        cor = listaCartasResposta[0].color[:4]
+        resposta = document['carta_resposta']
+        resposta.classList.remove(CLAZZ[cor])
+        listaCartasResposta.pop(0)
+        cor = listaCartasResposta[0].color[:4]
+        resposta.classList.add(CLAZZ[cor])
+        hero = document['carta_hero']
+        hero.html = ''
+        frm = listaCartasResposta[0].forman
+        for figs in range(listaCartasResposta[0].numeron):
+            fg = html.IMG(src=f"../image/{FORM[frm]}.png")
+            form = html.FIGURE(fg, Class="image is-48x48")
+            _ = hero <= form
+        acertou = self.testaTudoDiferente(listaCartasResposta[0])
+        print(f"testou carta: {acertou},"
+              f" vals: {listaCartasResposta[0].color[:4]}")
+        if acertou:
+            document["_resultado_"].html = "Acertou"
+            document["_icon_resultado_"].src = "../image/ok.png"
+        else:
+            document["_resultado_"].html = "Errou"
+            document["_icon_resultado_"].src = "../image/cancel.png"
+
     def pegaAtributosCarta(self):
         return u"%s %s %s" % (self.numero, self.forma, self.cor)
 
     def testaMesmaCategoria(self, outra_carta, categoria):
         """Testa se as cartas são iguais na categoria.
-        Categoria pode ter atribuido três valores: numero, forma ou cor."""
+        Categoria pode ter atribuído três valores: numero, forma ou cor."""
         return (getattr(self, self._atributos[categoria]) ==
                 getattr(outra_carta, self._atributos[categoria]))
 
     def testaTudoDiferente(self, outra_carta):
-        """Testa se as cartas são diferentes em todas as categorias."""
+        """Testa se as cartas diferem em todas as categorias."""
         for categoria in self._atributos:
             if self.testaMesmaCategoria(outra_carta, categoria):
                 return False
@@ -87,8 +120,8 @@ class Carta:
 
 ########################################################################
 
-def criaListaEstimulo():
-    """Cria a lista de cartas estimulo. O conteudo de cada item da lista é uma carta."""
+def cria_lista_estimulo():
+    """Cria a lista de cartas estimulo. O conteúdo de cada item da lista é uma carta."""
     return [Carta(1, 0, 0),
             Carta(2, 1, 1),
             Carta(3, 2, 2),
@@ -141,10 +174,17 @@ def instrucoes_teste():
     Não há limite de tempo neste teste. Está Pronto? Vamos começar."""
 
 
+listaCartasResposta = criaListaResposta()
+
 ########################################################################
 
-# Inicializa as variaveis.
-listaCartasResposta = criaListaResposta()
-listaCartasEstimulo = criaListaEstimulo()
-listaCategorias = criaListaCategorias()
-numCartasResposta = 64
+
+def main():
+    """Imprimi na tela as instruções do teste. """
+
+    # Inicializa as variáveis.
+    lista_carta_estimulo = cria_lista_estimulo()
+    listaCategorias = criaListaCategorias()
+    numCartasResposta = 64
+    for num, carta in enumerate(lista_carta_estimulo):
+        document[f"carta{num+1}"].bind('click', carta.clicou)

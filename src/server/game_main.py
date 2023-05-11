@@ -93,16 +93,21 @@ class Home(LitHandler):
     def get(self):
         self.render("home.html", titulo="Alite - Games", version="23.05")
 
-    def post(self, **_):
+    def post(self, **kw):
         """Add a new user."""
-        data = json.loads(self.request.body.decode('utf-8'))
+        # data = {k: v  for k, v in kw}
+        data = {x: self.get_argument(x) for x in self.request.arguments}
+        print("form data", data)
+        # data = json.loads(data)
         # print('Got USER POST JSON data:', data)
         session_id = LitHandler.ds.insert(data)
-        self.write(str(session_id))
+        # self.write(str(session_id))
+        self.render("wcst.html", titulo="Alite - Games", version="23.05", session=session_id)
 
 
 def make_app(ds=None):
-    LitHandler.ds = ds
+    from unittest.mock import MagicMock
+    LitHandler.ds = ds or MagicMock()
     current_path = os.path.dirname(__file__)
     assets_path = os.path.join(current_path, "..", "game", "assets")
     static_path = os.path.join(current_path, "..", "game")
@@ -119,7 +124,8 @@ def make_app(ds=None):
         (r"/home/assets/(.*\.png)", StaticFileHandler,  {'path': assets_path}),
         (r"/(.*\.css)", StaticFileHandler,  {'path': template_path}),
         (r"/image/(.*\.ico)", StaticFileHandler,  {'path': image_path}),
-        (r"/image/(.*\.jpg)", StaticFileHandler,  {'path': image_path})
+        (r"/image/(.*\.jpg)", StaticFileHandler,  {'path': image_path}),
+        (r"/image/(.*\.png)", StaticFileHandler,  {'path': image_path})
     ]
     return Application(
         urls, debug=True,
