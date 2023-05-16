@@ -29,16 +29,22 @@ Criado em Junho de 2008
 
 Changelog
 ---------
+.. versionadded::    23.05
+        add click from bazaar, need fix (16).
+
 .. versionadded::    23.04
         Port to client interaction(05).
 
 """
 from browser import document, html
-
+from collections import namedtuple as nt
+COR = nt("Cor", "vd vm am az")(0, 1, 2, 3)
+FOR = nt("For", "tri est cru cir")(0, 1, 2, 3)
 COLORS = 'is-danger is-primary is-warning is-info'.split()
 COLORN = 'verm verd amar azul'.split()
 CLAZZ = {k: v for k, v in zip(COLORN, COLORS)}
-FORM = {k: v for k, v in enumerate("triangulo estrela cruz circulo".split())}
+FORM = {k: v for k, v in enumerate("play star cross circle".split())}
+# FORM = {k: v for k, v in enumerate("triangulo estrela cruz circulo".split())}
 
 ########################################################################
 
@@ -72,12 +78,13 @@ class Carta:
         self.cor = self._cores[cor][num][genero]
 
         self.num = numero
-        self.img = u"/static/plugins/wisconsin/images/%s.png" % self._formas[forma][2]
+        self.img = self._formas[forma][2]
+        # self.img = u"/static/plugins/wisconsin/images/%s.png" % self._formas[forma][2]
         self.color = self._cores[cor][2]
 
     def clicou(self, *_):
-        print(f"testou carta: {self.testaTudoDiferente(listaCartasResposta[0])},"
-              f" vals: {listaCartasResposta[0].color[:4]}")
+        # print(f"testou carta: {self.testaTudoDiferente(listaCartasResposta[0])},"
+        #       f" vals: {listaCartasResposta[0].color[:4]}")
         cor = listaCartasResposta[0].color[:4]
         resposta = document['carta_resposta']
         resposta.classList.remove(CLAZZ[cor])
@@ -88,9 +95,13 @@ class Carta:
         hero.html = ''
         frm = listaCartasResposta[0].forman
         for figs in range(listaCartasResposta[0].numeron):
-            fg = html.IMG(src=f"../image/{FORM[frm]}.png")
-            form = html.FIGURE(fg, Class="image is-48x48")
+            fg = html.I(Class=f"fas fa-{FORM[frm]} fa-2x is-size-2 has-text-black")
+            form = html.SPAN(fg, Class="icon is-large")+html.BR()
             _ = hero <= form
+        # for figs in range(listaCartasResposta[0].numeron):
+        #     fg = html.IMG(src=f"../image/{FORM[frm]}.png")
+        #     form = html.FIGURE(fg, Class="image is-64x64")
+        #     _ = hero <= form
         acertou = self.testaTudoDiferente(listaCartasResposta[0])
         print(f"testou carta: {acertou},"
               f" vals: {listaCartasResposta[0].color[:4]}")
@@ -121,17 +132,21 @@ class Carta:
 ########################################################################
 
 def cria_lista_estimulo():
-    """Cria a lista de cartas estimulo. O conteúdo de cada item da lista é uma carta."""
+    """Cria a lista de cartas estimulo. O conteúdo de cada item da lista é uma carta.
     return [Carta(1, 0, 0),
             Carta(2, 1, 1),
             Carta(3, 2, 2),
-            Carta(4, 3, 3)]
+            Carta(4, 3, 3)]"""
+    return [Carta(1, COR.vm, FOR.tri),
+            Carta(2, COR.vd, FOR.est),
+            Carta(3, COR.am, FOR.cru),
+            Carta(4, COR.az, FOR.cir)]
 
 
 ########################################################################
 
 def criaListaResposta():
-    """Cria a lista de cartas resposta. O conteudo de cada item da lista é uma carta."""
+    """Cria a lista de cartas resposta. O conteúdo de cada item da lista é uma carta."""
 
     lista = ['101', '420', '203', '130', '411', '122', '403', '330', '421', '232',
              '113', '300', '223', '112', '301', '433', '210', '332', '400', '132',
@@ -163,7 +178,7 @@ def criaListaCategorias():
 ########################################################################
 
 def instrucoes_teste():
-    """Imprimi na tela as instruções do teste. """
+    """Imprime na tela as instruções do teste. """
 
     return u"""Este é um teste um pouco diferente, porque eu não posso lhe
     dizer muito a respeito do que fazer. Você vai ser solicitado a associar
@@ -176,15 +191,96 @@ def instrucoes_teste():
 
 listaCartasResposta = criaListaResposta()
 
+
+
 ########################################################################
+
+
+class Wisconsin:
+    def __init__(self):
+        self.lista_carta_estimulo = cria_lista_estimulo()
+        self.listaCategorias = criaListaCategorias()
+        self.numCartasResposta = 64
+        self.houses = dict()
+        for num, carta in enumerate(self.lista_carta_estimulo):
+            document[f"carta_{num+1}"].bind('click', carta.clicou)
 
 
 def main():
     """Imprimi na tela as instruções do teste. """
+    wcst = Wisconsin()
+
+    def click(self, opcao, **kargs):
+        opcao = int(opcao)
+        sessionid = self.get_current_gamesession()
+
+        self._wisc = wcst
+        # self._wisc = model.API_GAME().retrieve(sessionid)
+        indiceCartaAtual = self._wisc.houses["indiceCartaAtual"]
+        categoria = self._wisc.houses["categoria"]
+        acertosConsecutivos = self._wisc.houses["acertosConsecutivos"]
+        outrosConsecutivos = self._wisc.houses["outrosConsecutivos"]
+
+        indiceCarta = (indiceCartaAtual % wcst.numCartasResposta) + 1
+        cartaResposta = wcst.listaCartasResposta[indiceCartaAtual]
+        cartaEstimulo = wcst.listaCartasEstimulo[opcao]
+
+        tudoDiferente = cartaResposta.testaTudoDiferente(cartaEstimulo)
+
+        if cartaResposta.testaMesmaCategoria(cartaEstimulo,
+                                             wcst.listaCategorias[categoria]):
+            acertosConsecutivos += 1
+            resultadoTeste = "Certo"
+        else:
+            acertosConsecutivos = 0
+            resultadoTeste = "Errado"
+
+        if tudoDiferente:
+            outrosConsecutivos += 1
+        else:
+            outrosConsecutivos = 0
+
+        if outrosConsecutivos == 3:
+            outrosConsecutivos = 0
+            resultadoTeste = u"%s.<br/>Leia atentamente as instruções: %s" % (resultadoTeste, wcst.instrucoes_teste())
+
+        # Grava a jogada no banco de dados
+        table = [dict(
+            carta_resposta=indiceCarta,
+            categoria=wcst.listaCategorias[categoria],
+            acertos=acertosConsecutivos,
+            cor=cartaResposta.testaMesmaCategoria(cartaEstimulo,
+                                                  wcst.listaCategorias[0]),
+            forma=cartaResposta.testaMesmaCategoria(cartaEstimulo,
+                                                    wcst.listaCategorias[1]),
+            numero=cartaResposta.testaMesmaCategoria(cartaEstimulo,
+                                                     wcst.listaCategorias[2]),
+            outros=tudoDiferente,
+            time=str(datetime.now()))]
+
+        # Se os acertos consecutivos chegarem a 10, troca a categoria
+        if acertosConsecutivos == 10:
+            acertosConsecutivos = 0
+            categoria += 1
+
+        houses = {"indiceCartaAtual": indiceCartaAtual,
+                  "categoria": categoria,
+                  "acertosConsecutivos": acertosConsecutivos,
+                  "outrosConsecutivos": outrosConsecutivos,
+                  "wteste": None
+                  }
+        self._wisc.next(houses=houses, table=table)
+
+        # Termina o teste se esgotar as categorias ou fim das cartas respostas.
+        if ((categoria >= len(wcst.listaCategorias)) or
+                (indiceCartaAtual >= len(wcst.listaCartasResposta) - 1)):
+            resultadoTeste = "Fim do Jogo"
+
+        self.redirect('/wisconsin/play?' + urllib.urlencode({"result": resultadoTeste.encode("UTF-8")}))
 
     # Inicializa as variáveis.
-    lista_carta_estimulo = cria_lista_estimulo()
-    listaCategorias = criaListaCategorias()
-    numCartasResposta = 64
-    for num, carta in enumerate(lista_carta_estimulo):
-        document[f"carta{num+1}"].bind('click', carta.clicou)
+    # lista_carta_estimulo = cria_lista_estimulo()
+    # listaCategorias = criaListaCategorias()
+    # numCartasResposta = 64
+    # for num, carta in enumerate(lista_carta_estimulo):
+    #     document[f"carta_{num+1}"].bind('click', carta.clicou)
