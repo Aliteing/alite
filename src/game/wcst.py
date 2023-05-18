@@ -32,6 +32,7 @@ Changelog
 .. versionadded::    23.05
         add click from bazaar, need fix (16).
         win condition fixed, but allows crash (17).
+        refactor WebCard out, new response card generation (18).
 
 .. versionadded::    23.04
         Port to client interaction(05).
@@ -39,7 +40,7 @@ Changelog
 """
 from datetime import datetime
 
-from browser import document, html
+# from browser import document, html
 from collections import namedtuple as nt
 
 COR = nt("Cor", "vm vd am az")(0, 1, 2, 3)
@@ -53,7 +54,6 @@ FORM = {k: v for k, v in enumerate("play star cross circle".split())}
 # FORM = {k: v for k, v in enumerate("triangulo estrela cruz circulo".split())}
 
 ########################################################################
-
 
 class Carta:
     # Definição dos itens de uma carta.
@@ -75,13 +75,14 @@ class Carta:
 
     def __init__(self, numero, forma, cor, jogo):
         self._click = self.do_click
+        self._resposta = jogo.card
         self._inicia(numero, forma, cor, jogo)
 
     def _inicia(self, numero, forma, cor, jogo):
         genero = 0 if forma not in [1, 2] else 1
         num = 0 if numero == 1 else 1
         self.jogo = jogo
-        self.numeron = numero
+        self.numeral = numero
         self.forman = forma
         self.colour = cor
         self.numero = self._numeros[numero - 1][genero]
@@ -90,7 +91,6 @@ class Carta:
 
         self.num = numero
         self.img = self._formas[forma][2]
-        # self.img = u"/static/plugins/wisconsin/images/%s.png" % self._formas[forma][2]
         self.color = self._cores[cor][2]
 
     def clicou(self, *_):
@@ -100,33 +100,20 @@ class Carta:
         self.jogo.click(self)
 
     def resultado(self, resultado, carta):
+        resposta = self._resposta
         carta = carta or self
-        self._inicia(carta.numeron, carta.forman, carta.colour, carta.jogo)
-        # acertou = self.testa_tudo_diferente(lista_cartas_resposta[0])
-        resposta = document['carta_resposta']
-        [resposta.classList.remove(CLAZZ[cor]) for cor in COLORN]
-        # lista_cartas_resposta.pop(0)
+        self._inicia(carta.numeral, carta.forman, carta.colour, carta.jogo)
         cor = carta.color[:4]
-        resposta.classList.add(CLAZZ[cor])
-        hero = document['carta_hero']
-        hero.html = ''
-        frm = carta.forman
-        print(self.color[:4], cor, CLAZZ[cor], frm, carta.numeron)
-        for figs in range(carta.numeron):
-            fg = html.I(Class=f"fas fa-{carta.img} fa-2x is-size-2 has-text-black")
-            form = html.SPAN(fg, Class="icon is-large") + html.BR()
-            _ = hero <= form
+        resposta.paint(color=CLAZZ[cor], form=FORM[carta.forman], number=carta.numeral)
         if not resultado:
             return
         if "Fim" in resultado:
             self._click = lambda *_: None
             print("O jogo terminou")
         if "Certo" in resultado:
-            document["_resultado_"].html = resultado
-            document["_icon_resultado_"].src = "../image/ok.png"
+            resposta.resultado("../image/ok.png", resultado)
         else:
-            document["_resultado_"].html = resultado
-            document["_icon_resultado_"].src = "../image/cancel.png"
+            resposta.resultado("../image/cancel.png", resultado)
 
     def pega_atributos_carta(self):
         return u"%s %s %s" % (self.numero, self.forma, self.cor)
@@ -159,17 +146,15 @@ def instrui_teste():
     Não há limite de tempo neste teste. Está Pronto? Vamos começar."""
 
 
-# listaCartasResposta = criaListaResposta()
-
-
 ########################################################################
 
 
 class Wisconsin:
-    def __init__(self):
+    def __init__(self, card):
+        self.card = card
         self.lista_carta_estimulo = self.cria_lista_estimulo()
         self.lista_carta_resposta = self.cria_lista_resposta()
-        self.lista_categorias = ["cor", "forma"] #, "numero", "cor", "forma", "numero"]
+        self.lista_categorias = ["cor", "forma", "numero", "cor", "forma", "numero"]
         self.numCartasResposta = 64
         self.houses = dict()
         self.indica_carta_atual = self.categoria = self.acertos_consecutivos = self.outros_consecutivos = 0
@@ -177,8 +162,7 @@ class Wisconsin:
 
         self.carta_resposta = self.lista_carta_resposta.pop(0)
         self.carta_resposta.resultado('', None)
-        for num, carta in enumerate(self.lista_carta_estimulo):
-            document[f"carta_{num + 1}"].bind('click', carta.clicou)
+        card.binder(self.lista_carta_estimulo)
 
     ########################################################################
 
@@ -192,12 +176,7 @@ class Wisconsin:
                  '100', '313', '432', '201', '310', '222', '133', '302', '221', '412',
                  '103', '311', '230', '401', '123', '331', '220', '102', '320', '231',
                  '423', '322', '200', '122']
-
-        for indica in range(len(lista)):
-            lista[indica] = Carta(numero=int(lista[indica][0]),
-                                  forma=int(lista[indica][1]),
-                                  cor=int(lista[indica][2]), jogo=self)
-        # [print(f"cor {c.color}, form {c.forma}, num: {c.numero}") for c in lista[:20]]
+        lista = [Carta(numero=int(n), forma=int(f), cor=int(c), jogo=self) for n, f, c in lista]
 
         return 2 * lista
 
@@ -240,12 +219,9 @@ class Wisconsin:
             carta_resposta=128-len(self.lista_carta_resposta),
             categoria=self.lista_categorias[self.categoria],
             acertos=self.acertos_consecutivos,
-            # cor=carta_resposta.testa_mesma_categoria(carta_estimulo,
-            #                                          self.lista_categorias[0]),
-            # forma=carta_resposta.testa_mesma_categoria(carta_estimulo,
-            #                                            self.lista_categorias[1]),
-            # numero=carta_resposta.testa_mesma_categoria(carta_estimulo,
-            #                                             self.lista_categorias[2]),
+            cor=carta_resposta.testa_mesma_categoria(carta_estimulo, "cor"),
+            forma=carta_resposta.testa_mesma_categoria(carta_estimulo, "forma"),
+            numero=carta_resposta.testa_mesma_categoria(carta_estimulo, "numero"),
             outros=tudo_diferente,
             time=str(datetime.now()))]
 
@@ -278,6 +254,30 @@ class Wisconsin:
         pass
 
 
-def main():
+def main(document, html):
     """Imprimi na tela as instruções do teste. """
-    _ = Wisconsin()
+
+    class WebCard:
+        def __init__(self, oid='carta_resposta'):
+            self.hero = document['carta_hero']
+            self.doc = document[oid]
+            self.resposta, self.icon = document["_resultado_"], document["_icon_resultado_"]
+
+        def paint(self, color, form, number):
+            [self.doc.classList.remove(cor) for cor in 'is-danger is-primary is-warning is-info'.split()]
+            self.doc.classList.add(color)
+            self.hero.html = ''
+            _ = [self.hero <= (html.SPAN(
+                html.I(Class=f"fas fa-{form} fa-2x is-size-2 has-text-black"), Class="icon is-large") + html.BR())
+                 for _ in range(number)]
+
+        def resultado(self, icon, text):
+            self.resposta.html = text
+            self.icon.src = icon
+
+        @staticmethod
+        def binder(cartas):
+            for num, carta in enumerate(cartas):
+                document[f"carta_{num + 1}"].bind('click', carta.clicou)
+
+    _ = Wisconsin(WebCard())

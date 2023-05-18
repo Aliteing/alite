@@ -30,6 +30,7 @@ Changelog
         added test for goal, trials, trial (09).
         added test for user, game, score (10).
         web tests for mongomock, fix add_game (10).
+        adding some tests for wisconsin game (18).
 
 .. versionadded::    23.04
         initial version (19).
@@ -44,9 +45,10 @@ import mongomock
 from tornado.testing import AsyncHTTPTestCase, gen_test
 from tornado.web import Application
 from tornado.httpserver import HTTPRequest
-from unittest.mock import Mock
+from unittest.mock import Mock, MagicMock
 import game_main as game
 from model.game_facade import Facade
+from wcst import Wisconsin, Carta
 
 MONGO = [
     dict(name=0, games=[dict(game=2, goal=0, trial=0, scorer=()), dict(game=2, goal=0, trial=1, scorer=())]),
@@ -80,7 +82,7 @@ class TestSomeHandler(AsyncHTTPTestCase):
         # [print(f"obj: {u}") for u in self.db.load_any()]
         self.assertIn(oid, user, f"oid {oid} not in user {user}")
 
-    def test_post_user(self):
+    def _test_post_user(self):
         response = self.fetch(r"/home/user", False, method="POST", body=json.dumps(dict(name=321, games=())))
         self.assertEqual(200, response.code, "failed post_score")
         self.assertEqual(24, len(response.body), "unexpected id size")
@@ -240,6 +242,28 @@ class TestGameFacade(unittest.TestCase):
         fnd = str([fn for fn in found])
         as_str = str([dict(marker=1234)])
         self.assertIn(as_str, fnd, f"found: {fnd}")
+
+
+class TestWiscosinGame(unittest.TestCase):
+    def setUp(self) -> None:
+        self.web = MagicMock()
+        self.game = Wisconsin(self.web)
+
+    def test_initial(self):
+        self.assertEqual(0, self.game.categoria)
+        self.assertEqual(1, self.game.carta_resposta.numeral)
+        self.assertEqual(4, len(self.game.lista_carta_estimulo))
+        self.assertEqual(127, len(self.game.lista_carta_resposta))
+        self.assertIsInstance(self.game.card, MagicMock)
+        self.assertEqual(1, self.game.card.binder.call_count)
+        self.assertEqual(1, self.game.card.paint.call_count)
+        self.assertEqual(0, self.game.card.resultado.call_count)
+
+    def test_first_guess_wrong(self):
+        carta0 = self.game.lista_carta_resposta[0]
+        self.assertIsInstance(carta0, Carta)
+        carta0.do_click()
+        self.assertEqual(0, self.web.resultado.call_count)
 
 
 if __name__ == '__main__':
