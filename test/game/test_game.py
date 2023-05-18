@@ -30,7 +30,7 @@ Changelog
         added test for goal, trials, trial (09).
         added test for user, game, score (10).
         web tests for mongomock, fix add_game (10).
-        adding some tests for wisconsin game (18).
+        adding seven tests for wisconsin game (18).
 
 .. versionadded::    23.04
         initial version (19).
@@ -244,10 +244,14 @@ class TestGameFacade(unittest.TestCase):
         self.assertIn(as_str, fnd, f"found: {fnd}")
 
 
-class TestWiscosinGame(unittest.TestCase):
+class TestWisconsinGame(unittest.TestCase):
+    GO, OG = '../image/ok.png', '../image/cancel.png'
+
     def setUp(self) -> None:
         self.web = MagicMock()
         self.game = Wisconsin(self.web)
+        self.db = MagicMock(name="db")
+        self.game.next = lambda houses, table: self.db.insert(houses=houses, table=table)
 
     def test_initial(self):
         self.assertEqual(0, self.game.categoria)
@@ -260,10 +264,77 @@ class TestWiscosinGame(unittest.TestCase):
         self.assertEqual(0, self.game.card.resultado.call_count)
 
     def test_first_guess_wrong(self):
-        carta0 = self.game.lista_carta_resposta[0]
+        carta0 = self.game.lista_carta_estimulo[3]
         self.assertIsInstance(carta0, Carta)
         carta0.do_click()
-        self.assertEqual(0, self.web.resultado.call_count)
+        self.assertEqual(1, self.web.resultado.call_count)
+        self.assertEqual(1, self.game.outros_consecutivos)
+        self.assertEqual(self.OG, self.web.resultado.call_args[0][0])
+        self.assertEqual('Errado', self.web.resultado.call_args[0][1])
+        self.assertEqual(1, self.db.insert.call_count)
+        self.assertIn("indiceCartaAtual", self.db.insert.call_args_list[0][1]["houses"])
+
+    def test_three_first_guesses_wrong(self):
+        cartas = self.game.lista_carta_estimulo
+        [cartas[carta].do_click() for carta in (3, 1)]
+        self.assertEqual(2, self.web.resultado.call_count)
+        self.assertEqual(2, self.game.outros_consecutivos)
+        cartas[2].do_click()
+        self.assertEqual(self.OG, self.web.resultado.call_args.args[0])
+        message = 'Errado. Clique a carta abaixo que combina com a mostrada em cima'
+        self.assertEqual(message, self.web.resultado.call_args.args[1])
+
+    def test_ten_first_guesses_right(self):
+        cartas = self.game.lista_carta_estimulo
+        self._find_correct_answers()
+        sequence_right = [go["cor"] for go in self.go[:10]]
+        [cartas[carta].do_click() for carta in sequence_right[:-1]]
+        self.assertEqual(9, self.web.resultado.call_count)
+        cartas[2].do_click()
+        self.assertEqual(self.GO, self.web.resultado.call_args.args[0])
+        message = 'Certo'
+        self.assertEqual(message, self.web.resultado.call_args.args[1][:5])
+        cartas[3].do_click()
+        self.assertEqual(self.OG, self.web.resultado.call_args.args[0])
+        cartas[0].do_click()
+        self.assertEqual(self.GO, self.web.resultado.call_args.args[0])
+
+    def test_30_first_guesses_right(self):
+
+        self.game.lista_categorias = self.game.lista_categorias[:3]
+        cartas = self.game.lista_carta_estimulo
+        self._find_correct_answers()
+        self.ten_card_round("cor", 0)
+        self.ten_card_round("forma", 10)
+        self.ten_card_round("numero", 20, go=self.OG)
+        self.assertEqual("Fim do Jogo", self.web.resultado.call_args.args[1])
+        cartas[0].do_click()
+
+    def ten_card_round(self, kind, card_count, go=None, count=None):
+        go = go or self.GO
+        cartas = self.game.lista_carta_estimulo
+        end_count = card_count+10
+        count = count or end_count
+        sequence_right = [go[kind] for go in self.go[card_count:end_count]]
+        [cartas[carta].do_click() for carta in sequence_right]
+        self.assertEqual(count, self.web.resultado.call_count)
+        self.assertEqual(go, self.web.resultado.call_args.args[0])
+
+    def test_15_first_guesses_right(self):
+
+        self.game.lista_carta_resposta = self.game.lista_carta_resposta[:15]
+        cartas = self.game.lista_carta_estimulo
+        self._find_correct_answers()
+        self.ten_card_round("cor", 0)
+        self.ten_card_round("forma", 10, go=self.OG, count=16)
+        self.assertFalse(self.game.lista_carta_resposta)
+        self.assertEqual("Fim do Jogo", self.web.resultado.call_args.args[1])
+        cartas[0].do_click()
+
+    def _find_correct_answers(self):
+        lista = Wisconsin.LISTA
+        keys = "numero forma cor".split()
+        self.go = [{k: int(v)-1 if "n" in k else int(v) for k, v in zip(keys, nfc)} for nfc in lista]
 
 
 if __name__ == '__main__':

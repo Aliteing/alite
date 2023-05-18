@@ -107,9 +107,6 @@ class Carta:
         resposta.paint(color=CLAZZ[cor], form=FORM[carta.forman], number=carta.numeral)
         if not resultado:
             return
-        if "Fim" in resultado:
-            self._click = lambda *_: None
-            print("O jogo terminou")
         if "Certo" in resultado:
             resposta.resultado("../image/ok.png", resultado)
         else:
@@ -150,7 +147,16 @@ def instrui_teste():
 
 
 class Wisconsin:
+    LISTA = ['101', '420', '203', '130', '411', '122', '403', '330', '421', '232',
+             '113', '300', '223', '112', '301', '433', '210', '332', '400', '132',
+             '213', '321', '212', '303', '410', '202', '323', '430', '211', '120',
+             '431', '110', '333', '422', '111', '402', '233', '312', '131', '423',
+             '100', '313', '432', '201', '310', '222', '133', '302', '221', '412',
+             '103', '311', '230', '401', '123', '331', '220', '102', '320', '231',
+             '423', '322', '200', '122']
+
     def __init__(self, card):
+        self._end_game = False
         self.card = card
         self.lista_carta_estimulo = self.cria_lista_estimulo()
         self.lista_carta_resposta = self.cria_lista_resposta()
@@ -169,14 +175,7 @@ class Wisconsin:
     def cria_lista_resposta(self):
         """Cria a lista de cartas resposta. O conteúdo de cada item da lista é uma carta."""
 
-        lista = ['101', '420', '203', '130', '411', '122', '403', '330', '421', '232',
-                 '113', '300', '223', '112', '301', '433', '210', '332', '400', '132',
-                 '213', '321', '212', '303', '410', '202', '323', '430', '211', '120',
-                 '431', '110', '333', '422', '111', '402', '233', '312', '131', '423',
-                 '100', '313', '432', '201', '310', '222', '133', '302', '221', '412',
-                 '103', '311', '230', '401', '123', '331', '220', '102', '320', '231',
-                 '423', '322', '200', '122']
-        lista = [Carta(numero=int(n), forma=int(f), cor=int(c), jogo=self) for n, f, c in lista]
+        lista = [Carta(numero=int(n), forma=int(f), cor=int(c), jogo=self) for n, f, c in self.LISTA]
 
         return 2 * lista
 
@@ -196,13 +195,17 @@ class Wisconsin:
         # print(carta_resposta.color, carta.color, self.lista_categorias[self.categoria])
 
         tudo_diferente = carta_resposta.testa_tudo_diferente(carta_estimulo)
+        if self._end_game:
+            return
 
         if carta_resposta.testa_mesma_categoria(carta_estimulo, self.lista_categorias[self.categoria]):
             self.acertos_consecutivos += 1
             resultado_teste = f"Certo {self.acertos_consecutivos}"
         else:
             self.acertos_consecutivos = 0
-            resultado_teste = f"Errado td:{tudo_diferente} crc: {carta_resposta.color} cec: {carta.color}"
+            resultado_teste = f"Errado"
+            # resultado_teste = f"Errado {tudo_diferente}"
+            # resultado_teste = f"Errado td:{tudo_diferente} crc: {carta_resposta.color} cec: {carta.color}"
 
         if tudo_diferente:
             self.outros_consecutivos += 1
@@ -230,7 +233,7 @@ class Wisconsin:
             self.acertos_consecutivos = 0
             self.categoria += 1
 
-        houses = {"indiceCartaAtual": self.indica_carta_atual,
+        houses = {"indiceCartaAtual": 128 - len(self.lista_carta_resposta),
                   "categoria": self.categoria,
                   "self.acertos_consecutivos": self.acertos_consecutivos,
                   "outrosConsecutivos": self.outros_consecutivos,
@@ -243,11 +246,13 @@ class Wisconsin:
                 (not self.lista_carta_resposta)):
             resultado_teste = "Fim do Jogo"
             self.carta_resposta.resultado(resultado_teste, None)
+            self._end_game = True
+
         else:
             nova_carta = self.lista_carta_resposta.pop(0)
+            if not self.lista_carta_resposta:
+                resultado_teste = "Fim do Jogo"
             self.carta_resposta.resultado(resultado_teste, nova_carta)
-
-        # self.redirect('/wisconsin/play?' + urllib.urlencode({"result": resultadoTeste.encode("UTF-8")}))
         return resultado_teste
 
     def next(self, houses, table):
@@ -259,17 +264,15 @@ def main(document, html):
 
     class WebCard:
         def __init__(self, oid='carta_resposta'):
-            self.hero = document['carta_hero']
-            self.doc = document[oid]
+            self.hero, self.doc = document['carta_hero'], document[oid]
             self.resposta, self.icon = document["_resultado_"], document["_icon_resultado_"]
 
         def paint(self, color, form, number):
             [self.doc.classList.remove(cor) for cor in 'is-danger is-primary is-warning is-info'.split()]
             self.doc.classList.add(color)
             self.hero.html = ''
-            _ = [self.hero <= (html.SPAN(
-                html.I(Class=f"fas fa-{form} fa-2x is-size-2 has-text-black"), Class="icon is-large") + html.BR())
-                 for _ in range(number)]
+            icon = f"fas fa-{form} fa-2x is-size-2 has-text-black"
+            _ = [self.hero <= (html.SPAN(html.I(Class=icon), Class="icon is-large") + html.BR()) for _ in range(number)]
 
         def resultado(self, icon, text):
             self.resposta.html = text
@@ -277,7 +280,6 @@ def main(document, html):
 
         @staticmethod
         def binder(cartas):
-            for num, carta in enumerate(cartas):
-                document[f"carta_{num + 1}"].bind('click', carta.clicou)
+            [document[f"carta_{num + 1}"].bind('click', carta.clicou) for num, carta in enumerate(cartas)]
 
     _ = Wisconsin(WebCard())
