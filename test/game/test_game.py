@@ -31,6 +31,7 @@ Changelog
         added test for user, game, score (10).
         web tests for mongomock, fix add_game (10).
         adding seven tests for wisconsin game (18).
+        include score testing for wisconsin (19).
 
 .. versionadded::    23.04
         initial version (19).
@@ -73,7 +74,7 @@ class TestSomeHandler(AsyncHTTPTestCase):
         self.assertIn(b"Jogo Eica - Cadastro", response.body)
 
     def test_post_add_game(self):
-        oid = self.db.insert(dict(name=357, games=()))
+        oid = self.db.insert(dict(name=357, year=5, gander="outro", age=12, games=()))
         response = self.fetch(r"/record/store", False, method="POST", body=json.dumps(dict(person=str(oid), game=88)))
         self.assertEqual(200, response.code, "failed add_game")
         self.assertEqual(24, len(response.body), "unexpected id size")
@@ -82,14 +83,15 @@ class TestSomeHandler(AsyncHTTPTestCase):
         # [print(f"obj: {u}") for u in self.db.load_any()]
         self.assertIn(oid, user, f"oid {oid} not in user {user}")
 
-    def _test_post_user(self):
-        response = self.fetch(r"/home/user", False, method="POST", body=json.dumps(dict(name=321, games=())))
+    def test_post_user(self):
+        user_data = dict(name=321, year=5, gander="outro", age=12, games=())
+        response = self.fetch(r"/home/user", False, method="POST", body=json.dumps(user_data))
         self.assertEqual(200, response.code, "failed post_score")
-        self.assertEqual(24, len(response.body), "unexpected id size")
-        user = str(self.db.load_any())
-        oid = response.body.decode("utf8")
+        self.assertLess(5000, len(response.body), f"unexpected id size {response.body}")
+        user = str(self.db.load_any()[0]["_id"])
+        page = response.body.decode("utf8")
         # [print(u) for u in self.db.load_any()]
-        self.assertIn(oid, user, f"oid {oid} not in user {user}")
+        self.assertIn(user, page, f"user {user} not in page {page}")
 
     def test_put_score(self):
         oid = self.db.insert(dict(name=246, games=()))
@@ -249,9 +251,9 @@ class TestWisconsinGame(unittest.TestCase):
 
     def setUp(self) -> None:
         self.web = MagicMock()
-        self.game = Wisconsin(self.web)
+        self.game = Wisconsin(self.web, 123456)
         self.db = MagicMock(name="db")
-        self.game.next = lambda houses, table: self.db.insert(houses=houses, table=table)
+        self.game.next = lambda data: self.db.insert(score=data)
 
     def test_initial(self):
         self.assertEqual(0, self.game.categoria)
@@ -272,7 +274,8 @@ class TestWisconsinGame(unittest.TestCase):
         self.assertEqual(self.OG, self.web.resultado.call_args[0][0])
         self.assertEqual('Errado', self.web.resultado.call_args[0][1])
         self.assertEqual(1, self.db.insert.call_count)
-        self.assertIn("indiceCartaAtual", self.db.insert.call_args_list[0][1]["houses"])
+        self.assertIn("valor", self.db.insert.call_args_list[0][1]["score"])
+        self.assertFalse(any(self.db.insert.call_args_list[0][1]["score"]["valor"]))
 
     def test_three_first_guesses_wrong(self):
         cartas = self.game.lista_carta_estimulo
@@ -283,6 +286,9 @@ class TestWisconsinGame(unittest.TestCase):
         self.assertEqual(self.OG, self.web.resultado.call_args.args[0])
         message = 'Errado. Clique a carta abaixo que combina com a mostrada em cima'
         self.assertEqual(message, self.web.resultado.call_args.args[1])
+        self.assertEqual(3, self.db.insert.call_count)
+        self.assertIn("ponto", self.db.insert.call_args_list[2][1]["score"])
+        self.assertIn(3, self.db.insert.call_args_list[2][1]["score"]["ponto"])
 
     def test_ten_first_guesses_right(self):
         cartas = self.game.lista_carta_estimulo
@@ -294,6 +300,8 @@ class TestWisconsinGame(unittest.TestCase):
         self.assertEqual(self.GO, self.web.resultado.call_args.args[0])
         message = 'Certo'
         self.assertEqual(message, self.web.resultado.call_args.args[1][:5])
+        self.assertIn("ponto", self.db.insert.call_args_list[9][1]["score"])
+        self.assertIn(10, self.db.insert.call_args_list[9][1]["score"]["ponto"])
         cartas[3].do_click()
         self.assertEqual(self.OG, self.web.resultado.call_args.args[0])
         cartas[0].do_click()
@@ -309,6 +317,8 @@ class TestWisconsinGame(unittest.TestCase):
         self.ten_card_round("numero", 20, go=self.OG)
         self.assertEqual("Fim do Jogo", self.web.resultado.call_args.args[1])
         cartas[0].do_click()
+        self.assertIn("carta", self.db.insert.call_args_list[29][1]["score"])
+        self.assertIn(2, self.db.insert.call_args_list[29][1]["score"]["valor"][-1:])
 
     def ten_card_round(self, kind, card_count, go=None, count=None):
         go = go or self.GO

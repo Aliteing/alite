@@ -33,6 +33,7 @@ Changelog
         add click from bazaar, need fix (16).
         win condition fixed, but allows crash (17).
         refactor WebCard out, new response card generation (18).
+        add session and scoring conforming to API (19).
 
 .. versionadded::    23.04
         Port to client interaction(05).
@@ -51,10 +52,7 @@ CLAZZ = {k: v for k, v in zip(COLORN, COLORS)}
 FORM = {k: v for k, v in enumerate("play star cross circle".split())}
 
 
-# FORM = {k: v for k, v in enumerate("triangulo estrela cruz circulo".split())}
-
 ########################################################################
-
 class Carta:
     # Definição dos itens de uma carta.
     _numeros = [(u"Um", u"Uma"),
@@ -144,8 +142,6 @@ def instrui_teste():
 
 
 ########################################################################
-
-
 class Wisconsin:
     LISTA = ['101', '420', '203', '130', '411', '122', '403', '330', '421', '232',
              '113', '300', '223', '112', '301', '433', '210', '332', '400', '132',
@@ -155,9 +151,9 @@ class Wisconsin:
              '103', '311', '230', '401', '123', '331', '220', '102', '320', '231',
              '423', '322', '200', '122']
 
-    def __init__(self, card):
+    def __init__(self, card, session):
         self._end_game = False
-        self.card = card
+        self.card, self.session = card, session
         self.lista_carta_estimulo = self.cria_lista_estimulo()
         self.lista_carta_resposta = self.cria_lista_resposta()
         self.lista_categorias = ["cor", "forma", "numero", "cor", "forma", "numero"]
@@ -211,35 +207,26 @@ class Wisconsin:
             self.outros_consecutivos += 1
         else:
             self.outros_consecutivos = 0
+        val = [1 if carta_resposta.testa_mesma_categoria(carta_estimulo, a) else 0 for a in "cor forma numero".split()]
+        data = dict(
+            _id=self.session,
+            carta=128-len(self.lista_carta_resposta),
+            casa=carta_estimulo.pega_atributos_carta(),
+            move=carta_resposta.pega_atributos_carta(),
+            ponto=(self.acertos_consecutivos, self.outros_consecutivos, tudo_diferente),
+            valor=val + [self.categoria],
+            time=str(datetime.now())
+        )
 
         if self.outros_consecutivos == 3:
             self.outros_consecutivos = 0
             resultado_teste = "Errado. Clique a carta abaixo que combina com a mostrada em cima"
-            # resultadoTeste = u"%s.<br/>Leia atentamente as instruções: %s" % (resultadoTeste, wcst.instrucoes_teste())
-
-        # Grava a jogada no banco de dados
-        table = [dict(
-            carta_resposta=128-len(self.lista_carta_resposta),
-            categoria=self.lista_categorias[self.categoria],
-            acertos=self.acertos_consecutivos,
-            cor=carta_resposta.testa_mesma_categoria(carta_estimulo, "cor"),
-            forma=carta_resposta.testa_mesma_categoria(carta_estimulo, "forma"),
-            numero=carta_resposta.testa_mesma_categoria(carta_estimulo, "numero"),
-            outros=tudo_diferente,
-            time=str(datetime.now()))]
 
         # Se os acertos consecutivos chegarem a 10, troca a categoria
         if self.acertos_consecutivos == 10:
             self.acertos_consecutivos = 0
             self.categoria += 1
-
-        houses = {"indiceCartaAtual": 128 - len(self.lista_carta_resposta),
-                  "categoria": self.categoria,
-                  "self.acertos_consecutivos": self.acertos_consecutivos,
-                  "outrosConsecutivos": self.outros_consecutivos,
-                  "wteste": None
-                  }
-        self._wisc.next(houses=houses, table=table)
+        self._wisc.next(data)
 
         # Termina o teste se esgotar as categorias ou fim das cartas respostas.
         if ((self.categoria >= len(self.lista_categorias)) or
@@ -255,11 +242,11 @@ class Wisconsin:
             self.carta_resposta.resultado(resultado_teste, nova_carta)
         return resultado_teste
 
-    def next(self, houses, table):
-        pass
+    def next(self, data):
+        self.card.send(data)
 
 
-def main(document, html):
+def main(document, html, ajax, session):
     """Imprimi na tela as instruções do teste. """
 
     class WebCard:
@@ -279,7 +266,28 @@ def main(document, html):
             self.icon.src = icon
 
         @staticmethod
+        def send(data, url=r"/record/store", action=lambda t: None, method="POST"):
+            def on_complete(request):
+                if int(request.status) == 200 or request.status == 0:
+                    # print("req = ajax()== 200", request.text)
+                    action(request.text)
+                else:
+                    print("error " + request.text)
+
+            req = ajax()
+            req.bind('complete', on_complete)
+            # url = "/record/" + operation
+            req.open(method, url, True)
+            # req.set_header('content-type', 'application/x-www-form-urlencoded')
+            req.set_header("content-type", "application/json")
+            # req.set_header("Content-Type", "application/json; charset=utf-8")
+            import json
+            data = json.dumps(data)
+            print("def send", data)
+            req.send(data)
+
+        @staticmethod
         def binder(cartas):
             [document[f"carta_{num + 1}"].bind('click', carta.clicou) for num, carta in enumerate(cartas)]
 
-    _ = Wisconsin(WebCard())
+    _ = Wisconsin(WebCard(), session)

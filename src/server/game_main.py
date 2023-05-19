@@ -107,7 +107,9 @@ class Home(LitHandler):
 
 def make_app(ds=None):
     from unittest.mock import MagicMock
-    LitHandler.ds = ds or MagicMock()
+    mds = MagicMock(name="mds")
+    mds.insert.return_value = 100001
+    LitHandler.ds = ds or mds
     current_path = os.path.dirname(__file__)
     assets_path = os.path.join(current_path, "..", "game", "assets")
     static_path = os.path.join(current_path, "..", "game")
