@@ -21,6 +21,11 @@
 
 .. moduleauthor:: Carlo Oliveira <carlo@nce.ufrj.br>
 
+Changelog
+---------
+.. versionadded::    23.05
+        add gid to Vitollino.GID (20).
+
 """
 
 from braser.vitollino import Vitollino, Actor
@@ -38,6 +43,7 @@ class JogoEica(Vitollino):
 
     def __init__(self, gid, w=1000, h=800):
         super().__init__(w, h, alpha=True)  # super é invocado aqui para preservar os poderes recebidos do Circus
+        Vitollino.GID = gid
         self.eica = Eica()
 
 

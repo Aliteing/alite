@@ -1,3 +1,32 @@
+#! /usr/bin/env python
+# -*- coding: UTF8 -*-
+# Este arquivo é parte do programa EICA
+# Copyright 2014-2017 Carlo Oliveira <carlo@nce.ufrj.br>,
+# `Labase <http://labase.selfip.org/>`__; `GPL <http://j.mp/GNU_GPL3>`__.
+#
+# EICA é um software livre; você pode redistribuí-lo e/ou
+# modificá-lo dentro dos termos da Licença Pública Geral GNU como
+# publicada pela Fundação do Software Livre (FSF); na versão 2 da
+# Licença.
+#
+# Este programa é distribuído na esperança de que possa ser útil,
+# mas SEM NENHUMA GARANTIA; sem uma garantia implícita de ADEQUAÇÃO
+# a qualquer MERCADO ou APLICAÇÃO EM PARTICULAR. Veja a
+# Licença Pública Geral GNU para maiores detalhes.
+#
+# Você deve ter recebido uma cópia da Licença Pública Geral GNU
+# junto com este programa, se não, veja em <http://www.gnu.org/licenses/>
+
+"""Encapsulate javascript library Phaser.
+
+.. moduleauthor:: Carlo Oliveira <carlo@nce.ufrj.br>
+
+Changelog
+---------
+.. versionadded::    23.05
+        change Phaser div id to pydiv, change POST to PUT (20).
+
+"""
 from braser import Braser
 from browser import doc
 
@@ -7,7 +36,7 @@ class Vitollino:
     BRASER = None
     GID = "00000000000000000000"
 
-    def __init__(self, w=800, h=800, mode=None, name="braser", states=None, alpha=False):
+    def __init__(self, w=800, h=800, mode=None, name="pydiv", states=None, alpha=False):
         self._init(w, h, mode, name, states, alpha)
         self.gamer = Vitollino.BRASER
         self.gamer.subscribe(self)
@@ -21,10 +50,10 @@ class Vitollino:
         Vitollino.GID = gid
         print(gid)
 
-    def _init(self, w=800, h=800, mode=None, name="braser", states=None, alpha=False):
+    def _init(self, w=800, h=800, mode=None, name="pydiv", states=None, alpha=False):
         doc["pydiv"].html = ""
         Vitollino.BRASER = Braser(w, h, mode, name, states, alpha)
-        Vitollino.BRASER.send('getid', {}, self.set_id, "GET")
+        # Vitollino.BRASER.send('getid', {}, self.set_id, "GET")
 
     def preload(self):
         pass
@@ -60,7 +89,7 @@ class Vitollino:
         carta = '_'.join(carta)
         casa = '_'.join([str(evento.x), str(evento.y)])
         data = dict(doc_id=Vitollino.GID, carta=carta, casa=casa, move="ok", ponto=ponto, valor=valor)
-        self.gamer.send('store', data)
+        self.gamer.send('store', data, method="PUT")
         print('store', data)
 
     def register(self, evento, carta, ponto, valor):

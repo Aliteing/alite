@@ -9,20 +9,21 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/phaser/2.6.1/phaser.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css"
           integrity="sha512-HqxHUkJM0SYcbvxUw5P60SzdOTy/QVwA1JJrvaXJv4q7lmbDZCmZaqz01UPOaQveoxfYRv1tHozWGPMcuTBuvQ=="
-          crossorigin="anonymous" referrerpolicy="no-referrer" />
-     <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed" rel="stylesheet">
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed" rel="stylesheet">
     <!--    <script src="https://kit.fontawesome.com/ee888cdf8b.js" crossorigin="anonymous"></script>-->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css"
           integrity="sha512-SzlrxWUlpfuzQ+pcUCosxcglQRNAq/DZjVsC0lE40xsADsfeQoEypE+enwcOiGjk/bSuGGKHEyjSoQ1zVisanQ=="
-          crossorigin="anonymous" referrerpolicy="no-referrer" />
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <link rel="stylesheet" href="../css/style.css">
     <link rel="shortcut icon" href="/image/favico.ico" type="image/x-icon"/>
-        <script type="text/javascript" src="https://unpkg.com/brython@3.5.0/brython.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/brython@3.5.0/brython.js"></script>
     <script type="text/javascript" src="https://unpkg.com/brython@3.5.0/brython_stdlib.js"></script>
-<!--        <script type="text/javascript" src="https://cdn.rawgit.com/brython-dev/brython/3.3.1/www/src/brython.js"></script>-->
-<!--    <script type="text/javascript" src="https://cdn.rawgit.com/brython-dev/brython/3.8.0/www/src/brython.js">-->
-<!--    </script>-->
-<!--    <script type="text/javascript" src="https://cdn.rawgit.com/brython-dev/brython/3.8.0/www/src/brython_stdlib.js">-->
-<!--    </script>-->
+    <!--        <script type="text/javascript" src="https://cdn.rawgit.com/brython-dev/brython/3.3.1/www/src/brython.js"></script>-->
+    <!--    <script type="text/javascript" src="https://cdn.rawgit.com/brython-dev/brython/3.8.0/www/src/brython.js">-->
+    <!--    </script>-->
+    <!--    <script type="text/javascript" src="https://cdn.rawgit.com/brython-dev/brython/3.8.0/www/src/brython_stdlib.js">-->
+    <!--    </script>-->
 
 </head>
 <body bgcolor="#003333" onload="brython({debug: 1})">
@@ -34,20 +35,49 @@
         from browser import document, alert, html, window, ajax, timer, svg
 
         from game import main
-        main()
+        main({{ session }})
+
+
+
+
+
 
 </script>
-<div id="_main_" style="position:relative; width:100%; height:100%;">
-    <div id="pydiv" style="margin: 0 auto; position:relative; top:0px;">
-        <img src="/image/alite_logo.jpg" alt="ALITE"
-             style="width:100vw; height:100vh; object-fit: cover;"/>
-        <div style="position: absolute; top: 50%; left: 50%; opacity:0.3;
+
+<!-- page header (title, etc) -->
+<div class="main-header">
+    <section class="hero is-small">
+        <div class="hero-body">
+            <div class="container">
+                <div class="has-text-centered">
+                    <!-- header && subheader -->
+                    <h1 class="title is-3 is-spaced">Jogo do Eica</h1>
+                    <h4 class="subtitle is-4">Viva as aventuras de um home pré-histórico.</h4>
+                    <!-- end of header && subheader -->
+
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+<!-- end page header -->
+
+<div class="container is-widescreen">
+    <div class="columns is-multiline is-centered has-text-centered">
+        <div class="column is-10">
+            <div id="pydiv" style="margin: auto;">
+                <img src="/image/alite_logo.jpg" alt="ALITE"
+                     style="width:100vw; height:100vh; object-fit: cover;"/>
+                <div style="position: absolute; top: 50%; left: 50%; opacity:0.3;
             margin-top: -100px; margin-left: -100px; width: 200px; height: 200px;">
-            <img src="https://imgur.com/uc56UAq.gif" width="200px" alt="LOADING" style=""/>
+                    <img src="https://imgur.com/uc56UAq.gif" width="200px" alt="LOADING"
+                         style=""/>
+                </div>
+            </div>
         </div>
     </div>
 </div>
-<div style="position:absolute; top:700px; left:2px; height: 10px;">
+<div style="position:absolute; top:700px; left:2px; height: 10px;margin:auto;">
     <p>
             <span id="_version_" style="color:#FFFFEE;font-size:8px;font-family:courier new,courier,monospace;">
                 {{version}}</span>

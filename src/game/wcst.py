@@ -266,7 +266,7 @@ def main(document, html, ajax, session):
             self.icon.src = icon
 
         @staticmethod
-        def send(data, url=r"/record/store", action=lambda t: None, method="POST"):
+        def send(data, url=r"/record/store", action=lambda t: None, method="PUT"):
             def on_complete(request):
                 if int(request.status) == 200 or request.status == 0:
                     # print("req = ajax()== 200", request.text)
@@ -274,7 +274,7 @@ def main(document, html, ajax, session):
                 else:
                     print("error " + request.text)
 
-            req = ajax()
+            req = ajax.ajax()
             req.bind('complete', on_complete)
             # url = "/record/" + operation
             req.open(method, url, True)

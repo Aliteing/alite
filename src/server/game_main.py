@@ -27,6 +27,7 @@ Changelog
 .. versionadded::    23.05
         use ds for web requests, migrate Main to Home (10).
         select eica or wisconsin game, en exit (20).
+        update score.put, mome.get and make_app (20a).
 
 .. versionadded::    23.04
         open a user register window, receive score in json (06).
@@ -82,8 +83,10 @@ class Score(LitHandler):
 
     def put(self, **_):
         """Put a new score."""
-        data = json.loads(self.request.body.decode('utf-8'))
-        game, score = data['game'], data['score']
+        score = json.loads(self.request.body.decode('utf-8'))
+        print("put data", score)
+        game = score.pop("_id") if "_id" in score else score.pop("doc_id")
+        # game, score = data['game'], data['score']
         # print('Got PUT JSON data:', data)
         session_id = LitHandler.ds.score(score_id=game, items=score)
         self.write(str(session_id))
@@ -94,10 +97,13 @@ class Home(LitHandler):
     def get(self):
         import os.path as op
         page = self.request.uri
-        session = self.get_argument("oid", "101")
-        page = op.split(page)[-1].split("?")[0] if len(page) > 1 else "home"
-        print("page", page)
-        self.render(f"{page}.html", titulo="Alite - Games", version="23.05", session=session)
+        print("page game", {x: self.get_argument(x) for x in self.request.arguments})
+        person, _page, game_id = self.get_argument("oid", "101"), "home", "home"
+        goal, trial = self.get_argument("goal", "0"), self.get_argument("trial", "0")
+        if len(page) > 1:
+            _page = op.split(page)[-1].split("?")[0]
+            game_id = LitHandler.ds.add_game(person, _page, goal=int(goal), trial=int(trial))
+        self.render(f"{_page}.html", titulo="Alite - Games", version="23.05", session=game_id)
 
     def post(self, **_):
         """Add a new user."""
@@ -115,6 +121,7 @@ def make_app(ds=None):
     from unittest.mock import MagicMock
     mds = MagicMock(name="mds")
     mds.insert.return_value = 100001
+    mds.add_game.return_value = 300003
     LitHandler.ds = ds or mds
     current_path = os.path.dirname(__file__)
     assets_path = os.path.join(current_path, "..", "game", "assets")
