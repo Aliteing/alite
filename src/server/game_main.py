@@ -26,6 +26,7 @@ Changelog
 ---------
 .. versionadded::    23.05
         use ds for web requests, migrate Main to Home (10).
+        select eica or wisconsin game, en exit (20).
 
 .. versionadded::    23.04
         open a user register window, receive score in json (06).
@@ -91,9 +92,14 @@ class Score(LitHandler):
 class Home(LitHandler):
 
     def get(self):
-        self.render("home.html", titulo="Alite - Games", version="23.05")
+        import os.path as op
+        page = self.request.uri
+        session = self.get_argument("oid", "101")
+        page = op.split(page)[-1].split("?")[0] if len(page) > 1 else "home"
+        print("page", page)
+        self.render(f"{page}.html", titulo="Alite - Games", version="23.05", session=session)
 
-    def post(self, **kw):
+    def post(self, **_):
         """Add a new user."""
         # data = {k: v  for k, v in kw}
         data = {x: self.get_argument(x) for x in self.request.arguments}
@@ -102,7 +108,7 @@ class Home(LitHandler):
         # print('Got USER POST JSON data:', data)
         session_id = LitHandler.ds.insert(data)
         # self.write(str(session_id))
-        self.render("wcst.html", titulo="Alite - Games", version="23.05", session=session_id)
+        self.render("games.html", titulo="Alite - Games", version="23.05", session=session_id)
 
 
 def make_app(ds=None):
@@ -113,18 +119,18 @@ def make_app(ds=None):
     current_path = os.path.dirname(__file__)
     assets_path = os.path.join(current_path, "..", "game", "assets")
     static_path = os.path.join(current_path, "..", "game")
-    template_path = os.path.join(current_path, "templates")
+    style_path = os.path.join(current_path, "css")
     image_path = os.path.join(current_path, "image")
     # print(static_path)
 
     urls = [
         ("/", Home),
-        ("/home/user", Home),
+        ("/home/user", Home), ("/home/game", Home), ("/home/wcst", Home),
         (r"/record/oid", Score),
         ("/record/store", Score),
         (r"/home/(.*\.py)", StaticFileHandler,  {'path': static_path}),
         (r"/home/assets/(.*\.png)", StaticFileHandler,  {'path': assets_path}),
-        (r"/(.*\.css)", StaticFileHandler,  {'path': template_path}),
+        (r"/css/(.*\.css)", StaticFileHandler,  {'path': style_path}),
         (r"/image/(.*\.ico)", StaticFileHandler,  {'path': image_path}),
         (r"/image/(.*\.jpg)", StaticFileHandler,  {'path': image_path}),
         (r"/image/(.*\.png)", StaticFileHandler,  {'path': image_path})
