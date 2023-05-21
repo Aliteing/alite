@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css"
           integrity="sha512-SzlrxWUlpfuzQ+pcUCosxcglQRNAq/DZjVsC0lE40xsADsfeQoEypE+enwcOiGjk/bSuGGKHEyjSoQ1zVisanQ=="
           crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <link rel="stylesheet" href="../css/bulma.css">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="shortcut icon" href="/../image/favico.ico" type="../image/x-icon"/>
     <script type="text/javascript" src="https://cdn.rawgit.com/brython-dev/brython/3.8.0/www/src/brython.js">
@@ -37,6 +38,40 @@
 
 </head>
 <body>
+
+<!-- navigation -->
+<nav class="navbar is-transparent">
+  <div class="navbar-brand">
+    <a class="navbar-item" href="http://labase.github.io">
+      <img src="/image/alite_logo.jpg" alt="LABASE" width="26" height="28">
+    </a>
+    <div class="navbar-start">
+      <a class="navbar-item" href="/">
+        LABASE
+      </a>
+    </div>
+    <span class="navbar-burger" data-target="navbar-menu">
+        <span></span>
+        <span></span>
+        <span></span>
+    </span>
+  </div>
+
+  <div id="navbar-menu" class="navbar-menu">
+
+    <!-- this "nav-menu" is hidden on mobile -->
+    <div id="right_menu" class="navbar-end">
+            <a class="navbar-item is-tab" href="/infra/help.html">
+                <i class="fa-solid fa-question"></i>&nbsp;Help
+            </a>
+            <a class="navbar-item is-tab" href="/infra/about.html">
+                <i class="fa-regular fa-address-card"></i>&nbsp;About
+            </a>
+    </div>
+    <!-- end of nav -->
+  </div>
+</nav>
+<!-- end navigation -->
 <!-- page header (title, etc) -->
 <div class="main-header">
     <section class="hero">

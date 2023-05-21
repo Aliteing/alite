@@ -28,6 +28,7 @@ Changelog
         use ds for web requests, migrate Main to Home (10).
         select eica or wisconsin game, en exit (20).
         update score.put, mome.get and make_app (20a).
+        add infra help, about, replay, restart menus (20b).
 
 .. versionadded::    23.04
         open a user register window, receive score in json (06).
@@ -127,14 +128,16 @@ def make_app(ds=None):
     assets_path = os.path.join(current_path, "..", "game", "assets")
     static_path = os.path.join(current_path, "..", "game")
     style_path = os.path.join(current_path, "css")
+    infra_path = os.path.join(current_path, "infra")
     image_path = os.path.join(current_path, "image")
     # print(static_path)
 
     urls = [
         ("/", Home),
-        ("/home/user", Home), ("/home/game", Home), ("/home/wcst", Home),
+        ("/home/user", Home), ("/home/game", Home), ("/home/wcst", Home), ("/home/games", Home),
         (r"/record/oid", Score),
         ("/record/store", Score),
+        (r"/infra/(.*\.html)", StaticFileHandler,  {'path': infra_path}),
         (r"/home/(.*\.py)", StaticFileHandler,  {'path': static_path}),
         (r"/home/assets/(.*\.png)", StaticFileHandler,  {'path': assets_path}),
         (r"/css/(.*\.css)", StaticFileHandler,  {'path': style_path}),
