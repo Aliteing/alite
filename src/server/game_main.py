@@ -51,35 +51,16 @@ class LitHandler(RequestHandler):
         pass
 
 
-class MainPage(LitHandler):
-
-    def get(self):
-        self.render("home.html", titulo="Alite - Games", version="23.05")
-
-    def post(self, **_):
-        data = json.loads(self.request.body.decode('utf-8'))
-        print('Got USER POST JSON data:', data)
-        fields = self.request.body_arguments
-        fields = {k: self.get_argument(k) for k in fields}
-        fields_ = json.dumps(fields)
-        print("user post", fields_, data, "*", _)
-        session_id = LitHandler.ds.insert(fields)
-        self.write(str(session_id))
-
-
 class Score(LitHandler):
-
-    def get(self):
-        import uuid
-        session_id = str(uuid.uuid4().fields[-1])[:9]
-        self.write(session_id)
 
     def post(self, **_):
         """Add a new game"""
-        data = json.loads(self.request.body.decode('utf-8'))
-        person, game = data['person'], data['game']
-        # print('Got POST JSON data:', data, person, game)
-        session_id = LitHandler.ds.add_game(person=person, game=game)
+        argument_dict = {k: self.get_argument(k) for k in self.request.arguments}
+        # print("score post args", {x: self.get_argument(x) for x in self.request.arguments})
+        # print(argument_dict)
+
+        session_id = LitHandler.ds.add_game(**argument_dict)
+        # session_id = LitHandler.ds.add_game(person=person, game=game, goal=goal_, trial=trial_)
         self.write(str(session_id))
 
     def put(self, **_):
@@ -87,8 +68,6 @@ class Score(LitHandler):
         score = json.loads(self.request.body.decode('utf-8'))
         print("put data", score)
         game = score.pop("_id") if "_id" in score else score.pop("doc_id")
-        # game, score = data['game'], data['score']
-        # print('Got PUT JSON data:', data)
         session_id = LitHandler.ds.score(score_id=game, items=score)
         self.write(str(session_id))
 
@@ -96,14 +75,15 @@ class Score(LitHandler):
 class Home(LitHandler):
 
     def get(self):
+        """Serves request games to select a game, or one of the games request: wsct, game"""
         import os.path as op
         page = self.request.uri
         print("page game", {x: self.get_argument(x) for x in self.request.arguments})
         person, _page, game_id = self.get_argument("oid", "101"), "home", "home"
         goal, trial = self.get_argument("goal", "0"), self.get_argument("trial", "0")
         if len(page) > 1:
-            _page = op.split(page)[-1].split("?")[0]
-            game_id = LitHandler.ds.add_game(person, _page, goal=int(goal), trial=int(trial))
+            game_name = op.split(page)[-1].split("?")[0]  # recover the last path of the URI
+            game_id = LitHandler.ds.add_game(person, game_name, goal=int(goal), trial=int(trial))
         self.render(f"{_page}.html", titulo="Alite - Games", version="23.05", session=game_id)
 
     def post(self, **_):

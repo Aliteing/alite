@@ -32,6 +32,7 @@ Changelog
         web tests for mongomock, fix add_game (10).
         adding seven tests for wisconsin game (18).
         include score testing for wisconsin (19).
+        fixed test for adding goal to game (23).
 
 .. versionadded::    23.04
         initial version (19).
@@ -43,10 +44,8 @@ Changelog
 import json
 import unittest
 import mongomock
-from tornado.testing import AsyncHTTPTestCase, gen_test
-from tornado.web import Application
-from tornado.httpserver import HTTPRequest
-from unittest.mock import Mock, MagicMock
+from tornado.testing import AsyncHTTPTestCase
+from unittest.mock import MagicMock
 import game_main as game
 from model.game_facade import Facade
 from wcst import Wisconsin, Carta
@@ -73,15 +72,29 @@ class TestSomeHandler(AsyncHTTPTestCase):
         self.assertEqual(200, response.code, "failed retrieve main")
         self.assertIn(b"Jogo Eica - Cadastro", response.body)
 
-    def test_post_add_game(self):
-        oid = self.db.insert(dict(name=357, year=5, gander="outro", age=12, games=()))
-        response = self.fetch(r"/record/store", False, method="POST", body=json.dumps(dict(person=str(oid), game=88)))
+    def _post_add_game(self, oid, jogo=88, goal=0, trial=0):
+        body = json.dumps(dict(person=str(oid), game=jogo, goal=goal, trial=trial))
+        body = dict(person=str(oid), game=jogo, goal=goal, trial=trial)
+        from urllib.parse import urlencode
+        data = urlencode(body)
+
+        print("add_game", body)
+        response = self.fetch(r"/record/store", False, method="POST", body=data)
         self.assertEqual(200, response.code, "failed add_game")
         self.assertEqual(24, len(response.body), "unexpected id size")
-        user = str(self.db.load_any())
+        user = (self.db.load_any())
         oid = response.body.decode("utf8")
         # [print(f"obj: {u}") for u in self.db.load_any()]
-        self.assertIn(oid, user, f"oid {oid} not in user {user}")
+        self.assertIn(oid, str(user), f"oid {oid} not in user {user}")
+        return user
+
+    def test_post_add_game(self):
+        oid = self.db.insert(dict(name=357, year=5, gander="outro", age=12, games=()))
+        user = self._post_add_game(oid)
+        self.assertEqual(1, len(user[0]["games"]), f"oid {oid} not in user {user}")
+        self.assertIn("'0'", str([gl["goal"] for gl in user[0]["games"]]), f"oid {oid} not in user {user}")
+        user = self._post_add_game(oid, goal=33)
+        self.assertIn("'33'", str([gl["goal"] for gl in user[0]["games"]]), f"oid {oid} not in user {user}")
 
     def test_post_user(self):
         user_data = dict(name=321, year=5, gander="outro", age=12, games=())
@@ -94,28 +107,20 @@ class TestSomeHandler(AsyncHTTPTestCase):
         self.assertIn(user, page, f"user {user} not in page {page}")
 
     def test_put_score(self):
+        """Adiciona uma nova entrada de pontuação para o usuário 246 """
         oid = self.db.insert(dict(name=246, games=()))
         gamer = str(self.db.add_game(oid, 99))
-        body = json.dumps(dict(game=gamer, score=dict(marker=2460)))
+        body = json.dumps(dict(_id=gamer, score=dict(marker=2460)))
+        # body = json.dumps(dict(game=gamer, score=dict(marker=2460)))
         response = self.fetch(r"/record/store", False, method="PUT", body=body)
         self.assertEqual(200, response.code, "failed put_score")
-        self.assertIn(gamer, str(response.body), "unexpected id size")
+        self.assertIn(gamer, str(response.body), "id do jogo não está no corpo")
         user = str(self.db.load_any())
         score = str(dict(marker=2460))
         oid = response.body.decode("utf8")
         self.assertIn(oid, user, f"oid {oid} not in user {user}")
         # [print(u) for u in self.db.load_any()]
         self.assertIn(score, user, f"oid {score} not in user {user}")
-
-    @gen_test
-    def __test_no_from_date_param(self):
-        mock_application = Mock(spec=Application)
-        payload_request = HTTPRequest(
-            method='GET', uri='/', headers=None, body=None
-        )
-        handler = game.MainPage(mock_application, payload_request)
-        with self.assertRaises(ValueError):
-            yield handler.get()
 
 
 class TestGameFacade(unittest.TestCase):
