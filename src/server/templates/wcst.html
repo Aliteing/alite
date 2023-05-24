@@ -39,7 +39,7 @@
 
 </head>
 <!--<body bgcolor="#003333" onload="brython({debug: 1})">-->
-<body bgcolor="darkslategrey" onload="brython({debug: 1})">
+<body background-color="darkslategrey" onload="brython({debug: 1})">
 <script type="text/python">
     # This file is part of  program Alite
     # Copyright © 2022  Carlo Oliveira <carlo@nce.ufrj.br>,
@@ -57,7 +57,7 @@
 <!-- navigation -->
 <nav class="navbar is-transparent">
     <div class="navbar-brand">
-        <a class="navbar-item" href="http://labase.github.io">
+        <a class="navbar-item" href="https://labase.github.io">
             <img src="/image/alite_logo.jpg" alt="LABASE" width="26" height="28">
         </a>
         <div class="navbar-start">
@@ -76,16 +76,16 @@
 
         <!-- this "nav-menu" is hidden on mobile -->
         <div id="right_menu" class="navbar-end">
-            <a class="navbar-item is-tab" href="/home/wcst?oid={{ session }}">
+            <a class="navbar-item is-tab" href="/home/wcst?oid={{ session }}&trial={{ trial }}">
                 <i class="fa-solid fa-repeat"></i>&nbsp;Reinicia o Jogo
             </a>
             <a class="navbar-item is-tab" href="/home/games?oid={{ session }}">
                 <i class="fa-solid fa-person-running"></i>&nbsp;Outro Jogo
             </a>
-            <a class="navbar-item is-tab" href="/infra/help.html">
+            <a class="navbar-item is-tab" href="/infra/help.html" target="_blank">
                 <i class="fa-solid fa-question"></i>&nbsp;Help
             </a>
-            <a class="navbar-item is-tab" href="/infra/about.html">
+            <a class="navbar-item is-tab" href="/infra/about.html" target="_blank">
                 <i class="fa-regular fa-address-card"></i>&nbsp;About
             </a>
         </div>
@@ -271,7 +271,7 @@
                     <!-- image for post -->
                     <div class="card-image">
                         <figure class="image is-4by1">
-                            <a href="http://www.nce.ufrj.br/">
+                            <a href="https://www.nce.ufrj.br/">
                                 <img src="../image/nce-logo-8.png" height="30px" alt="NCE">
                             </a>
                         </figure>
@@ -286,7 +286,7 @@
                     <!-- image for post -->
                     <div class="card-image">
                         <figure class="image is-4by1">
-                            <a href="http://labase.github.io/">
+                            <a href="https://labase.github.io/">
                                 <img src="../image/labase-logo-8.png" height="30px" alt="LABASE">
                             </a>
                         </figure>
@@ -301,7 +301,7 @@
                     <!-- image for post -->
                     <div class="card-image">
                         <figure class="image is-3by1">
-                            <a href="http://www.sbc.org.br/2-uncategorised/1939-programa-superpython">
+                            <a href="https://www.sbc.org.br/2-uncategorised/1939-programa-superpython">
                                 <img src="../image/sbc-logo-8.png" alt="SBC">
                             </a>
                         </figure>
@@ -317,7 +317,7 @@
 
 
         <br>
-        <p>gaming platform by <a href="http://labase.github.io">http://labase.github.io</a></p>
+        <p>gaming platform by <a href="https://labase.github.io">https://labase.github.io</a></p>
         <p>this platform is proudly open source</p>
     </div>
 </div>

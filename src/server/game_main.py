@@ -29,6 +29,7 @@ Changelog
         select eica or wisconsin game, en exit (20).
         update score.put, mome.get and make_app (20a).
         add infra help, about, replay, restart menus (20b).
+        fix home get to deal correctly all pages (24).
 
 .. versionadded::    23.04
         open a user register window, receive score in json (06).
@@ -76,15 +77,25 @@ class Home(LitHandler):
 
     def get(self):
         """Serves request games to select a game, or one of the games request: wsct, game"""
+        def games():
+            return person, 0
+
+        def gamer():
+            game_id, trial_ = LitHandler.ds.add_game(person, game_name, goal=int(goal), trial=int(trial))\
+                if int(trial) == 0 else LitHandler.ds.add_trial(person, game_name, goal=int(goal), trial=int(trial))
+            return game_id, trial_
         import os.path as op
         page = self.request.uri
-        print("page game", {x: self.get_argument(x) for x in self.request.arguments})
-        person, _page, game_id = self.get_argument("oid", "101"), "home", "home"
-        goal, trial = self.get_argument("goal", "0"), self.get_argument("trial", "0")
-        if len(page) > 1:
-            game_name = op.split(page)[-1].split("?")[0]  # recover the last path of the URI
-            game_id = LitHandler.ds.add_game(person, game_name, goal=int(goal), trial=int(trial))
-        self.render(f"{_page}.html", titulo="Alite - Games", version="23.05", session=game_id)
+        person, goal, trial = [self.get_argument(arg, "0") for arg in "oid goal trial".split()]
+        game_name = op.split(page)[-1].split("?")[0] or "home"  # recover the last path of the URI
+
+        pager = {path: function for path, function in zip("games home wcst game".split(), [games, games, gamer, gamer])}
+        print("game_id, trial_", game_name, pager[game_name], pager[game_name]())
+        # print("page game", {x: self.get_argument(x) for x in self.request.arguments})
+        _game_id, trial = pager[game_name]()
+
+        self.render(f"{game_name}.html", titulo="Alite - Games", version="23.05",
+                    session=_game_id, goal=goal, trial=trial)
 
     def post(self, **_):
         """Add a new user."""
@@ -102,7 +113,8 @@ def make_app(ds=None):
     from unittest.mock import MagicMock
     mds = MagicMock(name="mds")
     mds.insert.return_value = 100001
-    mds.add_game.return_value = 300003
+    mds.add_game.return_value = 300003, 0
+    mds.add_trial.return_value = 400003, 1
     LitHandler.ds = ds or mds
     current_path = os.path.dirname(__file__)
     assets_path = os.path.join(current_path, "..", "game", "assets")

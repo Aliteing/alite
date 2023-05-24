@@ -30,6 +30,7 @@ Changelog
         add score & add_game (09).
         refactor session & expand format (10).
         fix add game and conform to web call (10).
+        add trial to add_game & add_trial (24).
 
 .. versionadded::    23.04
         adjust code to game persist (19).
@@ -68,7 +69,6 @@ class Facade:
         return [ob for ob in dbt]
 
     def load_player(self, oid):
-        # kind = dict(task="task", step="step", LABA="board")
         _ = [{'$lookup': {
             'from': 'models',
             'localField': 'oid',
@@ -78,15 +78,14 @@ class Facade:
             {'$match': {'oid': oid}},
             {'$project': {'authors': 1, 'cellmodels.celltypes': 1}}
         ]
-        # dbt = self.db.find_one(filter={"oid": oid}) if item_dict else self.db.find_one()
         dbt = self.db.find_one(filter={"oid": oid}) or self.db.find_one()
         print("dbt", dbt)
         return dbt
 
     def load_item(self, item_dict):
-        # kind = dict(task="task", step="step", LABA="board")
+        if item_dict and "_id" in item_dict:
+            item_dict["_id"] = id_ if (id_ := item_dict["_id"]) is ObjectId else ObjectId(id_)
         dbt = self.db.find_one(filter=item_dict) if item_dict else self.db.find_one()
-        # print("dbt", dbt)
         return dbt
 
     def insert(self, items):
@@ -154,11 +153,20 @@ class Facade:
         scorer = self.insert(dict(score=()))
         self.db.update_one({'_id': oid},
                            {'$push': {'games': dict(game=game, goal=goal, trial=trial, scorer=[scorer])}}, upsert=True)
-        return scorer
+        # print("add_game, scorer, trial", scorer, trial)
+        return scorer, trial
 
     def add_trial(self, person, game, goal=0, trial=0):
-        self.db.update_one({'_id': person},
-                           {'$push': {'games': dict(game=game, goal=goal, trial=trial, scorer=())}}, upsert=True)
+        oid = person if person is ObjectId else ObjectId(person)
+        item_dict = dict(_id=oid)
+        # item_dict = dict(_id=game, goal=goal)
+        trials = self.db.find_one(filter=item_dict)["games"]
+        # print("add_trial", len(trials), item_dict, trials)
+        self.db.update_one({'_id': oid},
+                           {'$push': {'games': dict(game=game, goal=goal, trial=len(trials), scorer=())}}, upsert=True)
+        trials = self.db.find_one(filter=item_dict)["games"]
+        # print("add_trial", len(trials), item_dict, trials)
+        return oid, len(trials)
 
     def score(self, items, score_id=None):
         self.db.update_one({'_id': score_id}, {'$push': {'score': items}}, upsert=True)

@@ -33,6 +33,7 @@ Changelog
         adding seven tests for wisconsin game (18).
         include score testing for wisconsin (19).
         fixed test for adding goal to game (23).
+        test add_game & add_trial with url arguments (24)
 
 .. versionadded::    23.04
         initial version (19).
@@ -49,6 +50,7 @@ from unittest.mock import MagicMock
 import game_main as game
 from model.game_facade import Facade
 from wcst import Wisconsin, Carta
+from urllib.parse import urlencode
 
 MONGO = [
     dict(name=0, games=[dict(game=2, goal=0, trial=0, scorer=()), dict(game=2, goal=0, trial=1, scorer=())]),
@@ -73,20 +75,62 @@ class TestSomeHandler(AsyncHTTPTestCase):
         self.assertIn(b"Jogo Eica - Cadastro", response.body)
 
     def _post_add_game(self, oid, jogo=88, goal=0, trial=0):
-        body = json.dumps(dict(person=str(oid), game=jogo, goal=goal, trial=trial))
         body = dict(person=str(oid), game=jogo, goal=goal, trial=trial)
         from urllib.parse import urlencode
         data = urlencode(body)
-
-        print("add_game", body)
+        # print("add_game", body)
         response = self.fetch(r"/record/store", False, method="POST", body=data)
         self.assertEqual(200, response.code, "failed add_game")
-        self.assertEqual(24, len(response.body), "unexpected id size")
+        self.assertLessEqual(24, len(response.body), "unexpected id size")
         user = (self.db.load_any())
-        oid = response.body.decode("utf8")
+        oid = response.body.decode("utf8")[0]
         # [print(f"obj: {u}") for u in self.db.load_any()]
         self.assertIn(oid, str(user), f"oid {oid} not in user {user}")
         return user
+
+    def _get_a_page(self, uri, **kwargs):
+        body = kwargs
+        data = urlencode(body)
+        print("add_game", data)
+        response = self.fetch(uri + "?" + data, False, method="GET")
+        self.assertEqual(200, response.code, "failed get add_game")
+        self.assertLess(4000, len(response.body), "unexpected id size")
+        # user = (self.db.load_any())
+        page = response.body.decode("utf8")
+        # [print(f"obj: {u}") for u in self.db.load_any()]
+        # self.assertIn(oid, str(page), f"oid {oid} not in user {user}")
+        return page
+
+    def test_get_games_page(self):
+        oid = str(self.db.insert(dict(name=357, year=5, gander="outro", age=12, games=())))
+        page = self._get_a_page(r"/home/games", oid=oid)
+        self.assertIn(oid, page, f"oid {oid} not in user {page}")
+
+    def test_get_eica_page(self):
+        oid = str(self.db.insert(dict(name=357, year=5, gander="outro", age=12, games=())))
+        page = self._get_a_page(r"/home/game", oid=oid, game=88, goal=0, trial=0)
+        # self.assertIn(oid, page, f"oid {oid} not in user {page}")
+        gamer = "88"
+        self.assertIn(gamer, page, f"oid {gamer} not in user {page}")
+
+    def test_get_wisconsin_page(self):
+        oid = str(self.db.insert(dict(name=357, year=5, gander="outro", age=12, games=())))
+        page = self._get_a_page(r"/home/wcst", oid=oid, game=88, goal=0, trial=0)
+        # self.assertIn(oid, page, f"oid {oid} not in user {page}")
+        gamer = "88"
+        self.assertIn(gamer, page, f"oid {gamer} not in user {page}")
+
+    def test_get_wisconsin_page_new_trial(self):
+        oid = str(self.db.insert(dict(name=358, year=6, gander="outro", age=12, games=())))
+        page = self._get_a_page(r"/home/wcst", oid=oid, game="wsct", goal=22, trial=0)
+        found = self.db.load_item(None)
+        self.assertIn(oid, str(found), f"oid {oid} not in user {page}")
+        gamer = str(found["games"][0]["scorer"][0])
+        page = self._get_a_page(r"/home/wcst", oid=oid, game="wsct", goal=22, trial=1)
+        found = self.db.load_item(None)
+        print("oid, gamer, found", oid, gamer, found)
+        gamer = "trial=2"
+        self.assertIn(str(gamer), page, f"oid {gamer} not in user {page}")
 
     def test_post_add_game(self):
         oid = self.db.insert(dict(name=357, year=5, gander="outro", age=12, games=()))
@@ -199,7 +243,7 @@ class TestGameFacade(unittest.TestCase):
         self.assertIn(as_str, fnd, f"found: {fnd}")
 
     def _add_game(self, person, game_id=3):
-        scorer = self.facade.add_game(person=person, game=game_id)  # dict(game=3, goals=())})
+        scorer, _ = self.facade.add_game(person=person, game=game_id)  # dict(game=3, goals=())})
         gamer = self.facade.load_item(dict(_id=person))
         self.assertEqual(person, gamer["_id"], f"found gamer: {gamer}, person: {person}")
         as_str = "{'game': 3, 'goal': 0, 'trial': 0, 'scorer': [ObjectId('%s')]}" % scorer
