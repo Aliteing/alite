@@ -31,6 +31,7 @@ Changelog
         refactor session & expand format (10).
         fix add game and conform to web call (10).
         add trial to add_game & add_trial (24).
+        fix get_pass .env path (25)
 
 .. versionadded::    23.04
         adjust code to game persist (19).
@@ -169,12 +170,17 @@ class Facade:
         return oid, len(trials)
 
     def score(self, items, score_id=None):
+        score_id = score_id if score_id is ObjectId else ObjectId(score_id)
         self.db.update_one({'_id': score_id}, {'$push': {'score': items}}, upsert=True)
         return score_id
 
 
 def get_pass():
-    with open("../../../..env", "r") as env:
+    import os
+    path = os.path.dirname(__file__)
+    _path = os.path.join(path, "..", "..", "..", ".env")
+    print(_path, os.path.dirname(_path))
+    with open(_path, "r") as env:
         return env.read().split("=")[1].strip('"')
 
 

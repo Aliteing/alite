@@ -34,6 +34,7 @@ Changelog
         win condition fixed, but allows crash (17).
         refactor WebCard out, new response card generation (18).
         add session and scoring conforming to API (19).
+        condense ponto & valor into strings (25).
 
 .. versionadded::    23.04
         Port to client interaction(05).
@@ -207,14 +208,16 @@ class Wisconsin:
             self.outros_consecutivos += 1
         else:
             self.outros_consecutivos = 0
-        val = [1 if carta_resposta.testa_mesma_categoria(carta_estimulo, a) else 0 for a in "cor forma numero".split()]
+        categorias = "cor forma numero".split()
+        val = "".join(["1" if carta_resposta.testa_mesma_categoria(carta_estimulo, a) else "0" for a in categorias])
+        pontuar = [str(it) for it in [self.acertos_consecutivos, self.outros_consecutivos, int(tudo_diferente)]]
         data = dict(
             _id=self.session,
             carta=128-len(self.lista_carta_resposta),
             casa=carta_estimulo.pega_atributos_carta(),
             move=carta_resposta.pega_atributos_carta(),
-            ponto=(self.acertos_consecutivos, self.outros_consecutivos, tudo_diferente),
-            valor=val + [self.categoria],
+            ponto="".join(pontuar),
+            valor=val + str(self.categoria),
             time=str(datetime.now())
         )
 

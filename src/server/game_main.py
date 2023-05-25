@@ -30,6 +30,7 @@ Changelog
         update score.put, mome.get and make_app (20a).
         add infra help, about, replay, restart menus (20b).
         fix home get to deal correctly all pages (24).
+        add game_id to page template, extract make_mock (25).
 
 .. versionadded::    23.04
         open a user register window, receive score in json (06).
@@ -67,7 +68,7 @@ class Score(LitHandler):
     def put(self, **_):
         """Put a new score."""
         score = json.loads(self.request.body.decode('utf-8'))
-        print("put data", score)
+        # print("put score data", score)
         game = score.pop("_id") if "_id" in score else score.pop("doc_id")
         session_id = LitHandler.ds.score(score_id=game, items=score)
         self.write(str(session_id))
@@ -90,18 +91,18 @@ class Home(LitHandler):
         game_name = op.split(page)[-1].split("?")[0] or "home"  # recover the last path of the URI
 
         pager = {path: function for path, function in zip("games home wcst game".split(), [games, games, gamer, gamer])}
-        print("game_id, trial_", game_name, pager[game_name], pager[game_name]())
+        # print("game_id, trial_", game_name, pager[game_name], pager[game_name]())
         # print("page game", {x: self.get_argument(x) for x in self.request.arguments})
         _game_id, trial = pager[game_name]()
 
         self.render(f"{game_name}.html", titulo="Alite - Games", version="23.05",
-                    session=_game_id, goal=goal, trial=trial)
+                    session=person, game_id=_game_id, goal=goal, trial=trial)
 
     def post(self, **_):
         """Add a new user."""
         # data = {k: v  for k, v in kw}
         data = {x: self.get_argument(x) for x in self.request.arguments}
-        print("form data", data)
+        # print("form data", data)
         # data = json.loads(data)
         # print('Got USER POST JSON data:', data)
         session_id = LitHandler.ds.insert(data)
@@ -109,13 +110,17 @@ class Home(LitHandler):
         self.render("games.html", titulo="Alite - Games", version="23.05", session=session_id)
 
 
-def make_app(ds=None):
+def make_mock():
     from unittest.mock import MagicMock
     mds = MagicMock(name="mds")
     mds.insert.return_value = 100001
     mds.add_game.return_value = 300003, 0
     mds.add_trial.return_value = 400003, 1
-    LitHandler.ds = ds or mds
+    return mds
+
+
+def make_app(ds=None):
+    LitHandler.ds = ds or make_mock()
     current_path = os.path.dirname(__file__)
     assets_path = os.path.join(current_path, "..", "game", "assets")
     static_path = os.path.join(current_path, "..", "game")
@@ -146,9 +151,10 @@ def make_app(ds=None):
 
 def start_server():
     from tornado.options import define, options
+    from model.game_facade import Facade
 
     define("port", default=8080, help="port to listen on for game server")
-    app = make_app()
+    app = make_app(Facade())
     app.listen(options.port)
     print(f"game listening on port {options.port}")
     IOLoop.instance().start()

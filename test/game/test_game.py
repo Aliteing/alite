@@ -33,7 +33,8 @@ Changelog
         adding seven tests for wisconsin game (18).
         include score testing for wisconsin (19).
         fixed test for adding goal to game (23).
-        test add_game & add_trial with url arguments (24)
+        test add_game & add_trial with url arguments (24).
+        fix for new add_game return signature (25).
 
 .. versionadded::    23.04
         initial version (19).
@@ -153,7 +154,8 @@ class TestSomeHandler(AsyncHTTPTestCase):
     def test_put_score(self):
         """Adiciona uma nova entrada de pontuação para o usuário 246 """
         oid = self.db.insert(dict(name=246, games=()))
-        gamer = str(self.db.add_game(oid, 99))
+        gamer, _ = self.db.add_game(oid, 99)
+        gamer = str(gamer)
         body = json.dumps(dict(_id=gamer, score=dict(marker=2460)))
         # body = json.dumps(dict(game=gamer, score=dict(marker=2460)))
         response = self.fetch(r"/record/store", False, method="PUT", body=body)
@@ -324,7 +326,8 @@ class TestWisconsinGame(unittest.TestCase):
         self.assertEqual('Errado', self.web.resultado.call_args[0][1])
         self.assertEqual(1, self.db.insert.call_count)
         self.assertIn("valor", self.db.insert.call_args_list[0][1]["score"])
-        self.assertFalse(any(self.db.insert.call_args_list[0][1]["score"]["valor"]))
+        valor = self.db.insert.call_args_list[0][1]["score"]["valor"]
+        self.assertFalse(int(valor), valor)
 
     def test_three_first_guesses_wrong(self):
         cartas = self.game.lista_carta_estimulo
@@ -337,7 +340,7 @@ class TestWisconsinGame(unittest.TestCase):
         self.assertEqual(message, self.web.resultado.call_args.args[1])
         self.assertEqual(3, self.db.insert.call_count)
         self.assertIn("ponto", self.db.insert.call_args_list[2][1]["score"])
-        self.assertIn(3, self.db.insert.call_args_list[2][1]["score"]["ponto"])
+        self.assertIn("3", self.db.insert.call_args_list[2][1]["score"]["ponto"])
 
     def test_ten_first_guesses_right(self):
         cartas = self.game.lista_carta_estimulo
@@ -350,7 +353,7 @@ class TestWisconsinGame(unittest.TestCase):
         message = 'Certo'
         self.assertEqual(message, self.web.resultado.call_args.args[1][:5])
         self.assertIn("ponto", self.db.insert.call_args_list[9][1]["score"])
-        self.assertIn(10, self.db.insert.call_args_list[9][1]["score"]["ponto"])
+        self.assertIn("10", self.db.insert.call_args_list[9][1]["score"]["ponto"])
         cartas[3].do_click()
         self.assertEqual(self.OG, self.web.resultado.call_args.args[0])
         cartas[0].do_click()
@@ -367,7 +370,7 @@ class TestWisconsinGame(unittest.TestCase):
         self.assertEqual("Fim do Jogo", self.web.resultado.call_args.args[1])
         cartas[0].do_click()
         self.assertIn("carta", self.db.insert.call_args_list[29][1]["score"])
-        self.assertIn(2, self.db.insert.call_args_list[29][1]["score"]["valor"][-1:])
+        self.assertIn("2", self.db.insert.call_args_list[29][1]["score"]["valor"])
 
     def ten_card_round(self, kind, card_count, go=None, count=None):
         go = go or self.GO
