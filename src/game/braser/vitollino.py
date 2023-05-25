@@ -25,8 +25,11 @@ Changelog
 ---------
 .. versionadded::    23.05
         change Phaser div id to pydiv, change POST to PUT (20).
+        change score send data to _id, add time (25).
 
 """
+from datetime import datetime
+
 from braser import Braser
 from browser import doc
 
@@ -88,14 +91,14 @@ class Vitollino:
     def score(self, evento, carta, ponto, valor):
         carta = '_'.join(carta)
         casa = '_'.join([str(evento.x), str(evento.y)])
-        data = dict(doc_id=Vitollino.GID, carta=carta, casa=casa, move="ok", ponto=ponto, valor=valor)
+        time = str(datetime.now())
+        data = dict(_id=Vitollino.GID, carta=carta, casa=casa, move="ok", ponto=ponto, valor=valor, time=time)
         self.gamer.send('store', data, method="PUT")
         print('store', data)
 
     def register(self, evento, carta, ponto, valor):
         carta = '_'.join(carta)
-        data = dict(doc_id=Vitollino.GID, carta=carta, casa=evento, move="ok", ponto=ponto, valor=valor)
-        self.registry(evento, carta, ponto)
+        self.registry(evento, carta, ponto, valor)
 
 
 class Actor(Vitollino):
