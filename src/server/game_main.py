@@ -31,6 +31,7 @@ Changelog
         add infra help, about, replay, restart menus (20b).
         fix home get to deal correctly all pages (24).
         add game_id to page template, extract make_mock (25).
+        recover home get from pager trials (25b).
 
 .. versionadded::    23.04
         open a user register window, receive score in json (06).
@@ -82,8 +83,7 @@ class Home(LitHandler):
             return person, 0
 
         def gamer():
-            game_id, trial_ = LitHandler.ds.add_game(person, game_name, goal=int(goal), trial=int(trial))\
-                if int(trial) == 0 else LitHandler.ds.add_trial(person, game_name, goal=int(goal), trial=int(trial))
+            game_id, trial_ = LitHandler.ds.add_game(person, game_name, goal=int(goal), trial=int(trial))
             return game_id, trial_
         import os.path as op
         page = self.request.uri
@@ -93,10 +93,10 @@ class Home(LitHandler):
         pager = {path: function for path, function in zip("games home wcst game".split(), [games, games, gamer, gamer])}
         # print("game_id, trial_", game_name, pager[game_name], pager[game_name]())
         # print("page game", {x: self.get_argument(x) for x in self.request.arguments})
-        _game_id, trial = pager[game_name]()
+        _game_id, _trial = pager[game_name]()
 
         self.render(f"{game_name}.html", titulo="Alite - Games", version="23.05",
-                    session=person, game_id=_game_id, goal=goal, trial=trial)
+                    session=person, game_id=_game_id, goal=goal, trial=_trial)
 
     def post(self, **_):
         """Add a new user."""

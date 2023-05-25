@@ -32,6 +32,7 @@ Changelog
         fix add game and conform to web call (10).
         add trial to add_game & add_trial (24).
         fix get_pass .env path (25)
+        new expand, fix add_game for trials (25a).
 
 .. versionadded::    23.04
         adjust code to game persist (19).
@@ -70,15 +71,6 @@ class Facade:
         return [ob for ob in dbt]
 
     def load_player(self, oid):
-        _ = [{'$lookup': {
-            'from': 'models',
-            'localField': 'oid',
-            'foreignField': 'ply_id',
-            'as': 'score'}},
-            {'$unwind': '$score'},
-            {'$match': {'oid': oid}},
-            {'$project': {'authors': 1, 'cellmodels.celltypes': 1}}
-        ]
         dbt = self.db.find_one(filter={"oid": oid}) or self.db.find_one()
         print("dbt", dbt)
         return dbt
@@ -115,30 +107,20 @@ class Facade:
             {
                 '$lookup': {
                     'from': 'score',
-                    'localField': 'games.score',
+                    'localField': 'games.scorer',
                     'foreignField': '_id',
-                    'as': 'scorer'
+                    'as': 'scoring'
                 }
             },
             {
                 '$project': {
                     'name': '$name',
-                    'all': {
-                        "game": "$games.game",
-                        "goal": "$games.goal",
-                        "trial": "$games.trial",
-                        'scorer': {'$ifNull': ['$scorer.0.score', []]}}
+                    "game": "$games.game",
+                    "goal": "$games.goal",
+                    "trial": "$games.trial",
+                    'scorer': {'$ifNull': ['$scoring.score', []]},
                 }
             },
-            {
-                '$group': {
-                    '_id': {
-                        '_id': '$_id',
-                        'name': '$name',
-                    },
-                    'games': {'$push': '$all'}
-                }
-            }
         ]
         result = self.db.aggregate(aggregate1)
 
@@ -150,24 +132,20 @@ class Facade:
         return result
 
     def add_game(self, person, game, goal=0, trial=0):
+        oid, scorer, trials = self.__find_trial(person, game, goal=goal, trial=trial)
+        self.db.update_one({'_id': oid},
+                           {'$push': {'games': dict(game=game, goal=goal, trial=trials, scorer=scorer)}}, upsert=True)
+        # print("add_game, scorer, trial", scorer, trial)
+        return scorer, trials
+
+    def __find_trial(self, person, game, goal=0, trial=0):
         oid = person if person is ObjectId else ObjectId(person)
         scorer = self.insert(dict(score=()))
-        self.db.update_one({'_id': oid},
-                           {'$push': {'games': dict(game=game, goal=goal, trial=trial, scorer=[scorer])}}, upsert=True)
-        # print("add_game, scorer, trial", scorer, trial)
-        return scorer, trial
-
-    def add_trial(self, person, game, goal=0, trial=0):
-        oid = person if person is ObjectId else ObjectId(person)
         item_dict = dict(_id=oid)
-        # item_dict = dict(_id=game, goal=goal)
-        trials = self.db.find_one(filter=item_dict)["games"]
-        # print("add_trial", len(trials), item_dict, trials)
-        self.db.update_one({'_id': oid},
-                           {'$push': {'games': dict(game=game, goal=goal, trial=len(trials), scorer=())}}, upsert=True)
-        trials = self.db.find_one(filter=item_dict)["games"]
-        # print("add_trial", len(trials), item_dict, trials)
-        return oid, len(trials)
+        trials = self.db.find_one(filter=item_dict)
+        trials = trials["games"] if "games" in trials else []
+        trials = [trial_ for trial_ in trials if trial_["game"] == game]
+        return oid, scorer, len(trials)
 
     def score(self, items, score_id=None):
         score_id = score_id if score_id is ObjectId else ObjectId(score_id)

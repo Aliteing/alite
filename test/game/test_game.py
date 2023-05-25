@@ -35,6 +35,7 @@ Changelog
         fixed test for adding goal to game (23).
         test add_game & add_trial with url arguments (24).
         fix for new add_game return signature (25).
+        fix testing for trial count and expand (25a).
 
 .. versionadded::    23.04
         initial version (19).
@@ -52,11 +53,11 @@ import game_main as game
 from model.game_facade import Facade
 from wcst import Wisconsin, Carta
 from urllib.parse import urlencode
-
+W= "wsct"
 MONGO = [
-    dict(name=0, games=[dict(game=2, goal=0, trial=0, scorer=()), dict(game=2, goal=0, trial=1, scorer=())]),
-    dict(name=1, games=[dict(game=2, goal=0, trial=0, scorer=()), dict(game=2, goal=0, trial=1, scorer=())]),
-    dict(name=2, games=[dict(game=2, goal=0, trial=0, scorer=()), dict(game=2, goal=0, trial=1, scorer=())]),
+    dict(name=0, games=[dict(game=W, goal=0, trial=0, scorer=None), dict(game=W, goal=0, trial=1, scorer=None)]),
+    dict(name=1, games=[dict(game=W, goal=0, trial=0, scorer=None), dict(game=W, goal=0, trial=1, scorer=None)]),
+    dict(name=2, games=[dict(game=W, goal=0, trial=0, scorer=None), dict(game=W, goal=0, trial=1, scorer=None)]),
     dict(score=(dict(marker=1), dict(marker=2))),
     dict(score=(dict(marker=21), dict(marker=22))),
     dict(score=(dict(marker=11), dict(marker=12), dict(marker=13))),
@@ -126,11 +127,11 @@ class TestSomeHandler(AsyncHTTPTestCase):
         page = self._get_a_page(r"/home/wcst", oid=oid, game="wsct", goal=22, trial=0)
         found = self.db.load_item(None)
         self.assertIn(oid, str(found), f"oid {oid} not in user {page}")
-        gamer = str(found["games"][0]["scorer"][0])
+        gamer = str(found["games"][0]["scorer"])
         page = self._get_a_page(r"/home/wcst", oid=oid, game="wsct", goal=22, trial=1)
         found = self.db.load_item(None)
         print("oid, gamer, found", oid, gamer, found)
-        gamer = "trial=2"
+        gamer = "trial=1"
         self.assertIn(str(gamer), page, f"oid {gamer} not in user {page}")
 
     def test_post_add_game(self):
@@ -185,7 +186,8 @@ class TestGameFacade(unittest.TestCase):
         # [print(sc[0]) for sc in populate]
 
         # [collection.update_one({'_id': ids}, {'$push': {'games.0.goals.0.trials.0.trial': item['_id']}}, upsert=True)
-        [collection.update_one({'_id': ids}, {'$push': {f'games.{gamer}.score': item['_id']}}, upsert=True)
+        # [collection.update_one({'_id': ids}, {'$push': {f'games.{gamer}.score': item['_id']}}, upsert=True)
+        [collection.update_one({'_id': ids}, {"$set": {f'games.{gamer}.scorer': item['_id']}}, upsert=True)
          for ids, items in populate for gamer, item in enumerate(items)]
 
         self.facade = Facade(db=collection)
@@ -210,13 +212,22 @@ class TestGameFacade(unittest.TestCase):
         found = self.facade.load_item(dict(_id=player))
         self.assertEqual(player, found['_id'], f"found: {found}")
 
+    def _test_expand_one_player_live(self):
+        db = Facade()
+        players = db.load_all()
+        self.assertIn("_id", players[0])
+        px = db.expand_item(players[0]["_id"])
+        px = [i for i in px]
+        self.assertIn("_-id", px)
+
     def test_expand_one_player(self):
+
         self._init_mongo()
         player = self.person[2]
 
         found = self.facade.expand_item(player)
         fnd = str([fn for fn in found])
-        as_str = "'scorer': [{'marker': 11}, {'marker': 12}, {'marker': 13}]"
+        as_str = "[{'marker': 11}, {'marker': 12}, {'marker': 13}]"
         self.assertIn(as_str, fnd, f"found: {fnd}")
 
     def test_add_user(self):
@@ -228,27 +239,29 @@ class TestGameFacade(unittest.TestCase):
         self._add_game(oid)
         found = self.facade.expand_item(oid)
         fnd = str([fn for fn in found])
-        games = "[{'game': 3, 'goal': 0, 'trial': 0, 'scorer': []}]"
-        as_str = f"[{{'games': {games}, '_id': {{'_id': ObjectId('{str(oid)}'), 'name': 321}}}}]"
+        games = "'game': 3, 'goal': 0, 'trial': 0, 'scorer': [[]]"
+        as_str = f"[{{'_id': ObjectId('{str(oid)}'), 'name': 321, {games}}}]"
         self.assertIn(as_str, fnd, f"found: {fnd}")
 
     def test_add_score(self):
         self._init_mongo()
-        scorer = self.score[0]
+        person = self.facade.load_any()[0]
+        scorer = person['games'][0]["scorer"]
         self.facade.score(dict(marker=22), scorer)
         gamer = self.facade.load_item(dict(_id=scorer))
+        # self.assertIn(999, person)
         as_str = "'score': [{'marker': 1}, {'marker': 2}, {'marker': 22}"
         self.assertIn(as_str, str(gamer), f"found: {gamer}")
-        found = self.facade.expand_item(self.person[0])
+        found = self.facade.expand_item(person["_id"])
         fnd = str([fn for fn in found])
-        as_str = "'scorer': [{'marker': 1}, {'marker': 2}, {'marker': 22}]"
+        as_str = "[{'marker': 1}, {'marker': 2}, {'marker': 22}]"
         self.assertIn(as_str, fnd, f"found: {fnd}")
 
     def _add_game(self, person, game_id=3):
         scorer, _ = self.facade.add_game(person=person, game=game_id)  # dict(game=3, goals=())})
         gamer = self.facade.load_item(dict(_id=person))
         self.assertEqual(person, gamer["_id"], f"found gamer: {gamer}, person: {person}")
-        as_str = "{'game': 3, 'goal': 0, 'trial': 0, 'scorer': [ObjectId('%s')]}" % scorer
+        as_str = "{'game': 3, 'goal': 0, 'trial': 0, 'scorer': ObjectId('%s')}" % scorer
         self.assertIn(as_str, str(gamer), f"found in games: {gamer['games']}")
 
     def test_add_game(self):
@@ -257,7 +270,7 @@ class TestGameFacade(unittest.TestCase):
         self._add_game(person)
         found = self.facade.expand_item(person)
         fnd = str([fn for fn in found])
-        as_str = "{'game': 3, 'goal': 0, 'trial': 0, 'scorer': []}"
+        as_str = "'game': 3, 'goal': 0, 'trial': 0, 'scorer': [[]]"
         self.assertIn(as_str, fnd, f"found: {fnd}")
 
     def _add_goal(self):
