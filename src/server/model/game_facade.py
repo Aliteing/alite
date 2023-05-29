@@ -33,6 +33,7 @@ Changelog
         add trial to add_game & add_trial (24).
         fix get_pass .env path (25)
         new expand, fix add_game for trials (25a).
+        add tornado options to db connect string (28)
 
 .. versionadded::    23.04
         adjust code to game persist (19).
@@ -44,23 +45,23 @@ Changelog
 import pymongo
 import uuid
 from bson.objectid import ObjectId
+from tornado.options import options
 
 
-def init(passwd, data_base="alite_game", collection="score", db_url="alitelabase.b1lm6fr.mongodb.net"):
-    username = "carlotolla9"
-    print("ALITE", passwd)
-    con_string = f"mongodb+srv://{username}:{passwd}@{db_url}/?retryWrites=true&w=majority"
+def init(data_base="alite_game", collection="score", con_string=None):
+    con_string = con_string or options.dbcon
     client = pymongo.MongoClient(con_string)
     mydb = client[data_base]
 
     my_col = mydb[collection]
-    print("did", my_col)
+    print("Connected to collection:", my_col)
     return my_col
 
 
 class Facade:
     def __init__(self, data_base="alite_game", collection="score", db=None):
-        self.db = db or init(get_pass(), data_base=data_base, collection=collection)
+        con = options.dbcon
+        self.db = db if db else init(data_base=data_base, collection=collection, con_string=con)
 
     def load_any(self):
         dbt = self.db.find()
@@ -123,12 +124,6 @@ class Facade:
             },
         ]
         result = self.db.aggregate(aggregate1)
-
-        # def scorer(sco):
-        #     return [{k: v for k, v in sc.items() if k not in "ply_id _id doc_id"} for sc in sco]
-
-        # result = [{k if k != "_id" else "game_goal": (v['game'], v['goal']) if k == "_id" else scorer(v)
-        #            for k, v in gm.items()} for gm in result]
         return result
 
     def add_game(self, person, game, goal=0, trial=0):
@@ -153,33 +148,6 @@ class Facade:
         return score_id
 
 
-def get_pass():
-    import os
-    path = os.path.dirname(__file__)
-    _path = os.path.join(path, "..", "..", "..", ".env")
-    print(_path, os.path.dirname(_path))
-    with open(_path, "r") as env:
-        return env.read().split("=")[1].strip('"')
-
-
-def local_up():
-    passwd = get_pass()
-    print(passwd)
-    username = "carlotolla9"
-    # db_url = "mongo"
-    # con_string = f"mongodb://{username}:{passwd}@{db_url}/?retryWrites=true&w=majority"
-    dbs = pymongo.MongoClient(host="0.0.0.0", username=username, password=passwd).list_database_names()
-    print("dbs", dbs)
-
-
-def game_populate():
-    global DS
-    DS = Facade(data_base="alite_game", collection="score")
-    data = {'doc_id': '824909783', 'carta': '__A_T_I_V_A__', 'casa': '0_0',
-            'move': 'ok', 'ponto': '_MUNDO_', 'valor': True}
-    DS.upsert(data, idx="doc_id")
-
-
 DS = None  # Facade()
 
 if __name__ == '__main__':
@@ -194,4 +162,5 @@ if __name__ == '__main__':
     # Persist().save_all(populate())
     # atlas_up()
     # local_up()
-    game_populate()
+    # game_populate()
+    pass

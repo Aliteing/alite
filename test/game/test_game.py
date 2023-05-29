@@ -36,6 +36,7 @@ Changelog
         test add_game & add_trial with url arguments (24).
         fix for new add_game return signature (25).
         fix testing for trial count and expand (25a).
+        Add patching to tornado options (28)
 
 .. versionadded::    23.04
         initial version (19).
@@ -48,12 +49,14 @@ import json
 import unittest
 import mongomock
 from tornado.testing import AsyncHTTPTestCase
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import game_main as game
-from model.game_facade import Facade
 from wcst import Wisconsin, Carta
 from urllib.parse import urlencode
-W= "wsct"
+import sys
+# sys.modules['tornado.options'] = MagicMock(name='mock_B')
+from model.game_facade import Facade
+W = "wsct"
 MONGO = [
     dict(name=0, games=[dict(game=W, goal=0, trial=0, scorer=None), dict(game=W, goal=0, trial=1, scorer=None)]),
     dict(name=1, games=[dict(game=W, goal=0, trial=0, scorer=None), dict(game=W, goal=0, trial=1, scorer=None)]),
@@ -66,6 +69,7 @@ MONGO = [
 
 
 class TestSomeHandler(AsyncHTTPTestCase):
+    @patch('model.game_facade.options', MagicMock(name="options"))
     def get_app(self):
         collection = mongomock.MongoClient().db.create_collection('score')
         self.db = Facade(db=collection)
@@ -171,7 +175,9 @@ class TestSomeHandler(AsyncHTTPTestCase):
 
 
 class TestGameFacade(unittest.TestCase):
+    @patch('model.game_facade.options', MagicMock(name="options"))
     def _init_mongo(self):
+        options = MagicMock(name="options")
         # collection = mongomock.MongoClient()
         collection = mongomock.MongoClient().db.create_collection('score')
         # collection = mongomock.MongoClient().db.collection

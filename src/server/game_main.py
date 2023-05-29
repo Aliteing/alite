@@ -32,6 +32,7 @@ Changelog
         fix home get to deal correctly all pages (24).
         add game_id to page template, extract make_mock (25).
         recover home get from pager trials (25b).
+        add timestamp with Rio timezone (28)
 
 .. versionadded::    23.04
         open a user register window, receive score in json (06).
@@ -102,11 +103,10 @@ class Home(LitHandler):
         """Add a new user."""
         # data = {k: v  for k, v in kw}
         data = {x: self.get_argument(x) for x in self.request.arguments}
-        # print("form data", data)
-        # data = json.loads(data)
-        # print('Got USER POST JSON data:', data)
+        from datetime import datetime, timezone, timedelta
+        timezone_info = timezone(timedelta(hours=-3.0))
+        data.update(dict(time=str(datetime.now(timezone_info))))
         session_id = LitHandler.ds.insert(data)
-        # self.write(str(session_id))
         self.render("games.html", titulo="Alite - Games", version="23.05", session=session_id)
 
 
@@ -150,10 +150,8 @@ def make_app(ds=None):
 
 
 def start_server():
-    from tornado.options import define, options
+    from tornado.options import options
     from model.game_facade import Facade
-
-    define("port", default=8080, help="port to listen on for game server")
     app = make_app(Facade())
     app.listen(options.port)
     print(f"game listening on port {options.port}")
