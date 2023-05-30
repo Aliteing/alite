@@ -37,6 +37,7 @@ Changelog
         fix for new add_game return signature (25).
         fix testing for trial count and expand (25a).
         Add patching to tornado options (28)
+        testes com MONGO_JSON, ajusta o novo expande (30)
 
 .. versionadded::    23.04
         initial version (19).
@@ -53,9 +54,8 @@ from unittest.mock import MagicMock, patch
 import game_main as game
 from wcst import Wisconsin, Carta
 from urllib.parse import urlencode
-import sys
-# sys.modules['tornado.options'] = MagicMock(name='mock_B')
 from model.game_facade import Facade
+
 W = "wsct"
 MONGO = [
     dict(name=0, games=[dict(game=W, goal=0, trial=0, scorer=None), dict(game=W, goal=0, trial=1, scorer=None)]),
@@ -66,6 +66,16 @@ MONGO = [
     dict(score=(dict(marker=11), dict(marker=12), dict(marker=13))),
     dict(score=(dict(marker=111), dict(marker=112), dict(marker=113))),
 ]
+MONGO_JSON = """[{"_id": "64765566bcea5d86f4f25e01", "name": "aluno", "ano": "ano1", "sexo": "masculino",
+               "idade": "anos10", "time": "2023-05-30 16:58:30.372556-03:00",
+               "games": [{"game": "wcst", "goal": 0, "trial": 0, "scorer": "647655c5bcea5d86f4f25e02"}]},
+              {"_id": "647655c5bcea5d86f4f25e02", "score": [
+                  {"carta": 1, "casa": "Duas Estrelas Verdes", "move": "Um Triângulo Verde", "ponto": "100",
+                   "valor": "1000", "time": "2023-05-30 17:00:08.476000"},
+                  {"carta": 2, "casa": "Um Triângulo Vermelho", "move": "Quatro Cruzes Vermelhas", "ponto": "200",
+                   "valor": "1000", "time": "2023-05-30 17:00:11.710000"},
+                  {"carta": 3, "casa": "Três Cruzes Amarelas", "move": "Dois Triângulos Azuis", "ponto": "011",
+                   "valor": "0000", "time": "2023-05-30 17:00:14.649000"}]}]"""
 
 
 class TestSomeHandler(AsyncHTTPTestCase):
@@ -176,28 +186,17 @@ class TestSomeHandler(AsyncHTTPTestCase):
 
 class TestGameFacade(unittest.TestCase):
     @patch('model.game_facade.options', MagicMock(name="options"))
-    def _init_mongo(self):
-        options = MagicMock(name="options")
-        # collection = mongomock.MongoClient()
+    def _init_mongo(self, objects=None):
         collection = mongomock.MongoClient().db.create_collection('score')
-        # collection = mongomock.MongoClient().db.collection
-        objects = MONGO
-        # objects = [dict(doc_id=0, games=1), dict(doc_id=0, game=2), dict(doc_id=0, game=1), dict(doc_id=0, games=2)]
+        objects = objects or MONGO
         collection.insert_many(objects)
         self.person = person = [it['_id'] for it in collection.find({'name': {'$exists': True}})]
         score = [it for it in collection.find({'score': {'$exists': True}})]
         self.score = [it['_id'] for it in score]
-        populate = [(per, score[i: i+1]) for i, per in enumerate(person)]
-        # print('len(person), len(score), len(populate)', len(person), len(score), len(populate))
-        # [print(sc[0]) for sc in populate]
-
-        # [collection.update_one({'_id': ids}, {'$push': {'games.0.goals.0.trials.0.trial': item['_id']}}, upsert=True)
-        # [collection.update_one({'_id': ids}, {'$push': {f'games.{gamer}.score': item['_id']}}, upsert=True)
+        populate = [(per, score[i: i + 1]) for i, per in enumerate(person)]
         [collection.update_one({'_id': ids}, {"$set": {f'games.{gamer}.scorer': item['_id']}}, upsert=True)
          for ids, items in populate for gamer, item in enumerate(items)]
-
         self.facade = Facade(db=collection)
-        # print(self.facade.load_item(dict(_id=person[0])))
 
     def test_list_mongo(self):
         dbs = mongomock.MongoClient(host="0.0.0.0", username="username", password="passwd").list_database_names()
@@ -227,12 +226,11 @@ class TestGameFacade(unittest.TestCase):
         self.assertIn("_-id", px)
 
     def test_expand_one_player(self):
-
         self._init_mongo()
         player = self.person[2]
 
         found = self.facade.expand_item(player)
-        fnd = str([fn for fn in found])
+        fnd = str(found)
         as_str = "[{'marker': 11}, {'marker': 12}, {'marker': 13}]"
         self.assertIn(as_str, fnd, f"found: {fnd}")
 
@@ -244,9 +242,9 @@ class TestGameFacade(unittest.TestCase):
         self.assertIn(as_str, str(gamer), f"found: {gamer}")
         self._add_game(oid)
         found = self.facade.expand_item(oid)
-        fnd = str([fn for fn in found])
-        games = "'game': 3, 'goal': 0, 'trial': 0, 'scorer': [[]]"
-        as_str = f"[{{'_id': ObjectId('{str(oid)}'), 'name': 321, {games}}}]"
+        fnd = str(found)
+        games = "'game': 3, 'goal': 0, 'trial': 0, 'scorer': []"
+        as_str = f"{{'_id': ObjectId('{str(oid)}'), 'name': 321, {games}}}"
         self.assertIn(as_str, fnd, f"found: {fnd}")
 
     def test_add_score(self):
@@ -259,9 +257,9 @@ class TestGameFacade(unittest.TestCase):
         as_str = "'score': [{'marker': 1}, {'marker': 2}, {'marker': 22}"
         self.assertIn(as_str, str(gamer), f"found: {gamer}")
         found = self.facade.expand_item(person["_id"])
-        fnd = str([fn for fn in found])
+        # fnd = str([fn for fn in found])
         as_str = "[{'marker': 1}, {'marker': 2}, {'marker': 22}]"
-        self.assertIn(as_str, fnd, f"found: {fnd}")
+        self.assertIn(as_str, str(found), f"found: {found}")
 
     def _add_game(self, person, game_id=3):
         scorer, _ = self.facade.add_game(person=person, game=game_id)  # dict(game=3, goals=())})
@@ -275,8 +273,8 @@ class TestGameFacade(unittest.TestCase):
         person = self.person[0]
         self._add_game(person)
         found = self.facade.expand_item(person)
-        fnd = str([fn for fn in found])
-        as_str = "'game': 3, 'goal': 0, 'trial': 0, 'scorer': [[]]"
+        fnd = str(found)
+        as_str = "'game': 'wsct', 'goal': 0, 'trial': 0, 'scorer': [{'marker': 1}"
         self.assertIn(as_str, fnd, f"found: {fnd}")
 
     def _add_goal(self):
@@ -314,6 +312,37 @@ class TestGameFacade(unittest.TestCase):
         fnd = str([fn for fn in found])
         as_str = str([dict(marker=1234)])
         self.assertIn(as_str, fnd, f"found: {fnd}")
+
+    @patch('model.game_facade.options', MagicMock(name="options"))
+    def _load_base(self):
+        obj = json.loads(MONGO_JSON)
+        self.assertIn("_id", obj[0])
+        collection = mongomock.MongoClient().db.create_collection('score')
+        collection.insert_many(obj)
+        self.facade = Facade(db=collection)
+
+    def test_load_base(self):
+        self._load_base()
+        found = self.facade.load_all()
+        self.assertEqual(1, len(found))
+        self.assertIn("name", found[0])
+
+    def test_load_game(self):
+        self._load_base()
+        found = self.facade.load_player("647655c5bcea5d86f4f25e02")
+        self.assertEqual(2, len(found))
+        self.assertIn("score", found)
+        self.assertNotIn("scorer", found)
+
+    def test_expand_player(self):
+        self._load_base()
+        found = self.facade.expand_item("64765566bcea5d86f4f25e01")
+        # found = [it for it in found]
+        # found["scorer"] = found["scorer"][0]
+        self.assertEqual(6, len(found))
+        self.assertIn("scorer", found)
+        self.assertIn("casa", found["scorer"][0])
+        self.assertNotIn("score", found)
 
 
 class TestWisconsinGame(unittest.TestCase):
@@ -379,7 +408,6 @@ class TestWisconsinGame(unittest.TestCase):
         self.assertEqual(self.GO, self.web.resultado.call_args.args[0])
 
     def test_30_first_guesses_right(self):
-
         self.game.lista_categorias = self.game.lista_categorias[:3]
         cartas = self.game.lista_carta_estimulo
         self._find_correct_answers()
@@ -394,7 +422,7 @@ class TestWisconsinGame(unittest.TestCase):
     def ten_card_round(self, kind, card_count, go=None, count=None):
         go = go or self.GO
         cartas = self.game.lista_carta_estimulo
-        end_count = card_count+10
+        end_count = card_count + 10
         count = count or end_count
         sequence_right = [go[kind] for go in self.go[card_count:end_count]]
         [cartas[carta].do_click() for carta in sequence_right]
@@ -402,7 +430,6 @@ class TestWisconsinGame(unittest.TestCase):
         self.assertEqual(go, self.web.resultado.call_args.args[0])
 
     def test_15_first_guesses_right(self):
-
         self.game.lista_carta_resposta = self.game.lista_carta_resposta[:15]
         cartas = self.game.lista_carta_estimulo
         self._find_correct_answers()
@@ -415,7 +442,7 @@ class TestWisconsinGame(unittest.TestCase):
     def _find_correct_answers(self):
         lista = Wisconsin.LISTA
         keys = "numero forma cor".split()
-        self.go = [{k: int(v)-1 if "n" in k else int(v) for k, v in zip(keys, nfc)} for nfc in lista]
+        self.go = [{k: int(v) - 1 if "n" in k else int(v) for k, v in zip(keys, nfc)} for nfc in lista]
 
 
 if __name__ == '__main__':

@@ -34,6 +34,7 @@ Changelog
         fix get_pass .env path (25)
         new expand, fix add_game for trials (25a).
         add tornado options to db connect string (28)
+        melhora o expande item com next, try, indexação (30)
 
 .. versionadded::    23.04
         adjust code to game persist (19).
@@ -93,6 +94,7 @@ class Facade:
         return ids
 
     def expand_item(self, oid):
+        oid = oid if oid is ObjectId else ObjectId(oid)
         aggregate1 = [
             {
                 '$match': {
@@ -123,7 +125,11 @@ class Facade:
                 }
             },
         ]
-        result = self.db.aggregate(aggregate1)
+        try:
+            result = self.db.aggregate(aggregate1).next()
+            result["scorer"] = result["scorer"][0]
+        except StopIteration:
+            result = dict(_id="THIS ID WAS NOT FOUND")
         return result
 
     def add_game(self, person, game, goal=0, trial=0):

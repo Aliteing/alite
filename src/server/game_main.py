@@ -34,6 +34,7 @@ Changelog
         recover home get from pager trials (25b).
         add timestamp with Rio timezone (28)
         add score retrieval for players & games (29)
+        erro 404, conserta score/games|game (30)
 
 .. versionadded::    23.04
         open a user register window, receive score in json (06).
@@ -62,6 +63,15 @@ class LitHandler(RequestHandler):
         pass
 
 
+class DefaultHandler(RequestHandler):
+    def prepare(self):
+        # Use prepare() to handle all the HTTP methods
+        self.set_status(404)
+        self.render("erro404.html", titulo="Alite - Erro 404", version="23.05")
+
+        # self.finish("404 - my thing")
+
+
 class JSONSerializer(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, ObjectId):
@@ -83,10 +93,10 @@ class Score(LitHandler):
             return LitHandler.ds.load_player(oid=person)
 
         def games():
-            return [it for it in LitHandler.ds.expand_item(oid=person)]
+            return LitHandler.ds.expand_item(oid=person)
 
         def game():
-            return [it for it in LitHandler.ds.load_item(dict(_id=person))]
+            return LitHandler.ds.load_item(dict(_id=person))
 
         import os.path as op
         page = self.request.uri
@@ -196,7 +206,8 @@ def make_app(ds=None):
     return Application(
         urls, debug=True,
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
-        static_path=static_path
+        static_path=static_path,
+        default_handler_class=DefaultHandler
     )
 
 
