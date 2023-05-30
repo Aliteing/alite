@@ -100,7 +100,9 @@ class Main:
         define("port", default=Configuration.port, help="port to listen on for game server")
         define("dbcon", default="mongodb://0.0.0.0:27017", help="connection string to database server")
         env = Configuration.env
-        options.parse_config_file(env) if env else options.parse_command_line()
+        # options.parse_config_file(env) if env else options.parse_command_line()
+        options.parse_config_file(env)
+        options.parse_command_line()
         con = options.dbcon
         print("GameDockerNoPasswordConfiguration.con_string = ", options.dbcon, con)
         GameDockerNoPasswordConfiguration(data_base="alite_game", collection="score", con_string=con)

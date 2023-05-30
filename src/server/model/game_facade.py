@@ -72,7 +72,7 @@ class Facade:
         return [ob for ob in dbt]
 
     def load_player(self, oid):
-        dbt = self.db.find_one(filter={"oid": oid}) or self.db.find_one()
+        dbt = self.db.find_one(filter={"_id": oid}) or self.db.find_one()
         print("dbt", dbt)
         return dbt
 

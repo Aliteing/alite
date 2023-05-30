@@ -33,6 +33,7 @@ Changelog
         add game_id to page template, extract make_mock (25).
         recover home get from pager trials (25b).
         add timestamp with Rio timezone (28)
+        add score retrieval for players & games (29)
 
 .. versionadded::    23.04
         open a user register window, receive score in json (06).
@@ -42,20 +43,67 @@ Changelog
 import os
 from typing import Optional, Awaitable
 
+from bson.objectid import ObjectId
 from tornado.web import Application, RequestHandler, StaticFileHandler
 from tornado.ioloop import IOLoop
 import json
+
+import model.game_facade
+
+
 # from model import DS
 
 
 class LitHandler(RequestHandler):
-    ds = None
+    ds: model.game_facade.Facade
     """Just implements abstract data_received"""
+
     def data_received(self, chunk: bytes) -> Optional[Awaitable[None]]:
         pass
 
 
+class JSONSerializer(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, ObjectId):
+            return obj.__repr__()
+
+        return json.JSONEncoder.default(self, obj)
+
+
 class Score(LitHandler):
+
+    def get(self):
+        """Recover data from database"""
+
+        def players():
+            play = LitHandler.ds.load_all()
+            return play
+
+        def player():
+            return LitHandler.ds.load_player(oid=person)
+
+        def games():
+            return [it for it in LitHandler.ds.expand_item(oid=person)]
+
+        def game():
+            return [it for it in LitHandler.ds.load_item(dict(_id=person))]
+
+        import os.path as op
+        page = self.request.uri
+        person = self.get_argument("oid", "0")
+        # person, goal, trial = [self.get_argument(arg, "0") for arg in "oid goal trial".split()]
+        game_name = op.split(page)[-1].split("?")[0] or "home"  # recover the last path of the URI
+        functions = zip("players player games game".split(), [players, player, games, game])
+
+        pager = {path: function for path, function in functions}
+        # print("game_id, trial_", game_name, pager[game_name], pager[game_name]())
+        # print("page game", {x: self.get_argument(x) for x in self.request.arguments})
+        data = pager[game_name]()
+        self.set_header('Content-Type', 'application/json')
+        # self.write(json.dumps(json.loads(json.dumps(data, cls=JSONSerializer))))
+        self.write(json.dumps(data, cls=JSONSerializer))
+
+        # self.write(data)
 
     def post(self, **_):
         """Add a new game"""
@@ -80,12 +128,14 @@ class Home(LitHandler):
 
     def get(self):
         """Serves request games to select a game, or one of the games request: wsct, game"""
+
         def games():
             return person, 0
 
         def gamer():
             game_id, trial_ = LitHandler.ds.add_game(person, game_name, goal=int(goal), trial=int(trial))
             return game_id, trial_
+
         import os.path as op
         page = self.request.uri
         person, goal, trial = [self.get_argument(arg, "0") for arg in "oid goal trial".split()]
@@ -134,19 +184,20 @@ def make_app(ds=None):
         ("/home/user", Home), ("/home/game", Home), ("/home/wcst", Home), ("/home/games", Home),
         (r"/record/oid", Score),
         ("/record/store", Score),
-        (r"/infra/(.*\.html)", StaticFileHandler,  {'path': infra_path}),
-        (r"/home/(.*\.py)", StaticFileHandler,  {'path': static_path}),
-        (r"/home/assets/(.*\.png)", StaticFileHandler,  {'path': assets_path}),
-        (r"/css/(.*\.css)", StaticFileHandler,  {'path': style_path}),
-        (r"/image/(.*\.ico)", StaticFileHandler,  {'path': image_path}),
-        (r"/image/(.*\.jpg)", StaticFileHandler,  {'path': image_path}),
-        (r"/image/(.*\.png)", StaticFileHandler,  {'path': image_path})
+        ("/score/player", Score), ("/score/players", Score), ("/score/games", Score), ("/score/game", Score),
+        (r"/infra/(.*\.html)", StaticFileHandler, {'path': infra_path}),
+        (r"/home/(.*\.py)", StaticFileHandler, {'path': static_path}),
+        (r"/home/assets/(.*\.png)", StaticFileHandler, {'path': assets_path}),
+        (r"/css/(.*\.css)", StaticFileHandler, {'path': style_path}),
+        (r"/image/(.*\.ico)", StaticFileHandler, {'path': image_path}),
+        (r"/image/(.*\.jpg)", StaticFileHandler, {'path': image_path}),
+        (r"/image/(.*\.png)", StaticFileHandler, {'path': image_path})
     ]
     return Application(
         urls, debug=True,
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
         static_path=static_path
-                       )
+    )
 
 
 def start_server():
