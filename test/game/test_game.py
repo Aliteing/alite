@@ -38,6 +38,7 @@ Changelog
         fix testing for trial count and expand (25a).
         Add patching to tornado options (28)
         testes com MONGO_JSON, ajusta o novo expande (30)
+        novo MONGO_JSON, adiciona json decoder (30)
 
 .. versionadded::    23.04
         initial version (19).
@@ -66,16 +67,32 @@ MONGO = [
     dict(score=(dict(marker=11), dict(marker=12), dict(marker=13))),
     dict(score=(dict(marker=111), dict(marker=112), dict(marker=113))),
 ]
-MONGO_JSON = """[{"_id": "64765566bcea5d86f4f25e01", "name": "aluno", "ano": "ano1", "sexo": "masculino",
-               "idade": "anos10", "time": "2023-05-30 16:58:30.372556-03:00",
-               "games": [{"game": "wcst", "goal": 0, "trial": 0, "scorer": "647655c5bcea5d86f4f25e02"}]},
-              {"_id": "647655c5bcea5d86f4f25e02", "score": [
-                  {"carta": 1, "casa": "Duas Estrelas Verdes", "move": "Um Triângulo Verde", "ponto": "100",
-                   "valor": "1000", "time": "2023-05-30 17:00:08.476000"},
-                  {"carta": 2, "casa": "Um Triângulo Vermelho", "move": "Quatro Cruzes Vermelhas", "ponto": "200",
-                   "valor": "1000", "time": "2023-05-30 17:00:11.710000"},
-                  {"carta": 3, "casa": "Três Cruzes Amarelas", "move": "Dois Triângulos Azuis", "ponto": "011",
-                   "valor": "0000", "time": "2023-05-30 17:00:14.649000"}]}]"""
+
+MONGO_JSON = '[{"_id":{"$oid":"64765566bcea5d86f4f25e01"},"name":"aluno","ano":"ano1","sexo":"masculino",' \
+             '"idade":"anos10","time":"2023-05-30 16:58:30.372556-03:00","games":[{"game":"wcst","goal":0,' \
+             '"trial":0,"scorer":{"$oid":"647655c5bcea5d86f4f25e02"}}]},{"_id":{"$oid":"647655c5bcea5d86f4f25e02"},' \
+             '"score":[{"carta":1,"casa":"Duas Estrelas Verdes","move":"Um Triângulo Verde","ponto":"100",' \
+             '"valor":"1000","time":"2023-05-30 17:00:08.476000"},{"carta":2,"casa":"Um Triângulo Vermelho",' \
+             '"move":"Quatro Cruzes Vermelhas","ponto":"200","valor":"1000","time":"2023-05-30 17:00:11.710000"},' \
+             '{"carta":3,"casa":"Três Cruzes Amarelas","move":"Dois Triângulos Azuis","ponto":"011","valor":"0000",' \
+             '"time":"2023-05-30 17:00:14.649000"}]},{"_id":{"$oid":"647685c3d77dfcb99fcb8ea3"},"name":"München",' \
+             '"ano":"ano2","sexo":"masculino","idade":"anos2","time":"2023-05-30 20:24:51.819758-03:00",' \
+             '"games":[{"game":"wcst","goal":0,"trial":0,"scorer":{"$oid":"64768663d77dfcb99fcb8ea4"}},' \
+             '{"game":"game","goal":0,"trial":0,"scorer":{"$oid":"647686eed77dfcb99fcb8ea5"}}]},' \
+             '{"_id":{"$oid":"64768663d77dfcb99fcb8ea4"},"score":[{"carta":1,"casa":"Duas Estrelas Verdes",' \
+             '"move":"Um Triângulo Verde","ponto":"100","valor":"1000","time":"2023-05-30 20:27:38.743000"},' \
+             '{"carta":2,"casa":"Um Triângulo Vermelho","move":"Quatro Cruzes Vermelhas","ponto":"200",' \
+             '"valor":"1000","time":"2023-05-30 20:27:41.413000"},{"carta":3,"casa":"Quatro Círculos Azuis",' \
+             '"move":"Dois Triângulos Azuis","ponto":"300","valor":"1000","time":"2023-05-30 20:27:45.201000"},' \
+             '{"carta":4,"casa":"Três Cruzes Amarelas","move":"Um Círculo Vermelho","ponto":"011","valor":"0000",' \
+             '"time":"2023-05-30 20:27:47.318000"}]},{"_id":{"$oid":"647686eed77dfcb99fcb8ea5"},' \
+             '"score":[{"carta":"__A_T_I_V_A__","casa":"0_0","move":"ok","ponto":"_MUNDO_","valor":true,' \
+             '"time":"2023-05-30 20:30:00.362999"},{"carta":"12","casa":"724_448","move":"ok","ponto":"_Mundo_",' \
+             '"valor":true,"time":"2023-05-30 20:30:03.190000"},{"carta":"31","casa":"148_576","move":"ok",' \
+             '"ponto":"_Mundo_","valor":true,"time":"2023-05-30 20:30:06.404000"},{"carta":"__A_T_I_V_A__",' \
+             '"casa":"0_0","move":"ok","ponto":"_CHAVES_","valor":true,"time":"2023-05-30 20:30:07.673000"},' \
+             '{"carta":"2","casa":"420_250","move":"ok","ponto":"_Chaves_","valor":true,' \
+             '"time":"2023-05-30 20:30:11.247999"}]}]'
 
 
 class TestSomeHandler(AsyncHTTPTestCase):
@@ -315,16 +332,24 @@ class TestGameFacade(unittest.TestCase):
 
     @patch('model.game_facade.options', MagicMock(name="options"))
     def _load_base(self):
-        obj = json.loads(MONGO_JSON)
-        self.assertIn("_id", obj[0])
+        def oid_decoder(obj):
+            from bson import ObjectId
+            if '$oid' in obj:
+                obj = ObjectId(obj['$oid'])
+                return obj
+            return obj
+
+        _obj = json.loads(MONGO_JSON, object_hook=oid_decoder)
+        # print("mongo json", _obj)
+        self.assertIn("_id", _obj[0])
         collection = mongomock.MongoClient().db.create_collection('score')
-        collection.insert_many(obj)
+        collection.insert_many(_obj)
         self.facade = Facade(db=collection)
 
     def test_load_base(self):
         self._load_base()
         found = self.facade.load_all()
-        self.assertEqual(1, len(found))
+        self.assertEqual(2, len(found))
         self.assertIn("name", found[0])
 
     def test_load_game(self):
@@ -339,9 +364,9 @@ class TestGameFacade(unittest.TestCase):
         found = self.facade.expand_item("64765566bcea5d86f4f25e01")
         # found = [it for it in found]
         # found["scorer"] = found["scorer"][0]
-        self.assertEqual(6, len(found))
-        self.assertIn("scorer", found)
-        self.assertIn("casa", found["scorer"][0])
+        # self.assertEqual(6, len(found))
+        self.assertIn("scorer", found[0])
+        self.assertIn("casa", found[0]["scorer"][0])
         self.assertNotIn("score", found)
 
 

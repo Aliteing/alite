@@ -35,6 +35,7 @@ Changelog
         refactor WebCard out, new response card generation (18).
         add session and scoring conforming to API (19).
         condense ponto & valor into strings (25).
+        add initial time for latency (31)
 
 .. versionadded::    23.04
         Port to client interaction(05).
@@ -155,6 +156,12 @@ class Wisconsin:
     def __init__(self, card, session):
         self._end_game = False
         self.card, self.session = card, session
+        data = dict(
+            _id=self.session, carta=0, casa="no no no", move="no no no",
+            ponto="000", valor="0000", time=str(datetime.now())
+        )
+
+        self.card.send(data)
         self.lista_carta_estimulo = self.cria_lista_estimulo()
         self.lista_carta_resposta = self.cria_lista_resposta()
         self.lista_categorias = ["cor", "forma", "numero", "cor", "forma", "numero"]

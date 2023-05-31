@@ -35,6 +35,7 @@ Changelog
         new expand, fix add_game for trials (25a).
         add tornado options to db connect string (28)
         melhora o expande item com next, try, indexação (30)
+        convert _id to ObjectID, melhora expande (31)
 
 .. versionadded::    23.04
         adjust code to game persist (19).
@@ -73,9 +74,10 @@ class Facade:
         return [ob for ob in dbt]
 
     def load_player(self, oid):
-        dbt = self.db.find_one(filter={"_id": oid}) or self.db.find_one()
-        print("dbt", dbt)
-        return dbt
+        oid = oid if oid is ObjectId else ObjectId(oid)
+        dbt = self.db.find_one(filter={"_id": oid})  # or self.db.find_one()
+        # print("load_player dbt", oid, dbt)
+        return dbt or dict(_id=f"THIS ID: {oid} WAS NOT FOUND")
 
     def load_item(self, item_dict):
         if item_dict and "_id" in item_dict:
@@ -126,8 +128,9 @@ class Facade:
             },
         ]
         try:
-            result = self.db.aggregate(aggregate1).next()
-            result["scorer"] = result["scorer"][0]
+            result = list(self.db.aggregate(aggregate1))
+            result = [{k: v if k != "scorer" else (v or [""])[0] for k, v in game.items()} for game in result]
+            # result["scorer"] = result["scorer"][0]
         except StopIteration:
             result = dict(_id="THIS ID WAS NOT FOUND")
         return result
@@ -140,6 +143,7 @@ class Facade:
         return scorer, trials
 
     def __find_trial(self, person, game, goal=0, trial=0):
+        _ = goal, trial
         oid = person if person is ObjectId else ObjectId(person)
         scorer = self.insert(dict(score=()))
         item_dict = dict(_id=oid)

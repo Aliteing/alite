@@ -25,16 +25,21 @@ Changelog
 ---------
 .. versionadded::    23.05
         add gid to Vitollino.GID (20).
+        add initial time for latency (31)
 
 """
 
-from braser.vitollino import Vitollino, Actor
+from braser.vitollino import Vitollino
 from .mundo import Mundo
 from .roda import Roda
 from .chaves import Chaves
 from .eica import Jogo, Imagem, Botao
-from .inventario import Inventario, MonoInventario
+# from .inventario import Inventario, MonoInventario
 from . import Folha, Ponto, __version__
+
+
+class Ev:
+    x = y = 0
 
 
 class JogoEica(Vitollino):
@@ -44,11 +49,12 @@ class JogoEica(Vitollino):
     def __init__(self, gid, w=1000, h=800):
         super().__init__(w, h, alpha=True)  # super é invocado aqui para preservar os poderes recebidos do Circus
         Vitollino.GID = gid
+        self.score(evento=Ev, carta="_INIT_", ponto="_INIT_", valor=True)
         self.eica = Eica()
 
 
 class Menu(Jogo):
-    """Essa  é a classe Jogo que recebe os poderes da classe Circus de poder criar um jogo"""
+    """Essa é a classe Jogo que recebe os poderes da classe Circus de poder criar um jogo"""
 
     def __init__(self, jogo):
         super().__init__()  # super é invocado aqui para preservar os poderes recebidos do Circus
@@ -56,6 +62,7 @@ class Menu(Jogo):
         Botao(Folha.itens, Ponto(735+50, 15), 36 + 3, lambda i: jogo.ativachaves(i), self, escala=(0.6, 0.6))
 
 
+# noinspection PyAttributeOutsideInit
 class Eica(Jogo):
     """Essa  é a classe Jogo que recebe os poderes da classe Circus de poder criar um jogo"""
 
@@ -131,6 +138,7 @@ def main(gid=None):
 class MonkeyPatcher:
 
     def score(self, evento, carta, ponto, valor):
+        _ = self
         carta = '_'.join(carta)
         casa = evento
         data = dict(doc_id=Vitollino.GID, carta=carta, casa=casa, move="ok", ponto=ponto, valor=valor)
