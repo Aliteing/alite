@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title id="_tt_">{{titulo}}</title>
+    <!-- stylesheets -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8">
+    <!-- fonts -->
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/phaser/2.6.1/phaser.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css"
+          integrity="sha512-HqxHUkJM0SYcbvxUw5P60SzdOTy/QVwA1JJrvaXJv4q7lmbDZCmZaqz01UPOaQveoxfYRv1tHozWGPMcuTBuvQ=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed" rel="stylesheet">
+    <!--    <script src="https://kit.fontawesome.com/ee888cdf8b.js" crossorigin="anonymous"></script>-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css"
+          integrity="sha512-SzlrxWUlpfuzQ+pcUCosxcglQRNAq/DZjVsC0lE40xsADsfeQoEypE+enwcOiGjk/bSuGGKHEyjSoQ1zVisanQ=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="shortcut icon" href="/image/favico.ico" type="image/x-icon"/>
+    <script type="text/javascript" src="https://unpkg.com/brython@3.5.0/brython.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/brython@3.5.0/brython_stdlib.js"></script>
+
+</head>
+<body bgcolor="#003333" onload="brython({debug: 1})">
+<script type="text/python">
+        # This file is part of  program Alite
+        # Copyright © 2023  Carlo Oliveira <carlo@nce.ufrj.br>,
+        # `Labase <http://labase.selfip.org/>`__; `GPL <https://is.gd/3Udt>`__.
+        # SPDX-License-Identifier: (GPLv3-or-later AND LGPL-2.0-only) WITH bison-exception
+        from browser import document, alert, html, window, ajax, timer, svg
+
+        from game import main
+        main("{{ game_id }}")
+
+
+
+
+
+
+</script>
+
+<!-- navigation -->
+<nav class="navbar is-transparent">
+    <div class="navbar-brand">
+        <a class="navbar-item" href="https://labase.github.io">
+            <img src="/image/alite_logo.jpg" alt="LABASE" width="26" height="28">
+        </a>
+        <div class="navbar-start">
+            <a class="navbar-item" href="/">
+                LABASE
+            </a>
+        </div>
+        <span class="navbar-burger" data-target="navbar-menu">
+        <span></span>
+        <span></span>
+        <span></span>
+    </span>
+    </div>
+
+    <div id="navbar-menu" class="navbar-menu">
+
+        <!-- this "nav-menu" is hidden on mobile -->
+        <div id="right_menu" class="navbar-end">
+            <a class="navbar-item is-tab" href="/home/game?oid={{ session }}&trial={{ trial }}">
+                <i class="fa-solid fa-repeat"></i>&nbsp;Reinicia o Jogo
+            </a>
+            <a class="navbar-item is-tab" href="/home/games?oid={{ session }}">
+                <i class="fa-solid fa-person-running"></i>&nbsp;Outro Jogo
+            </a>
+            <a class="navbar-item is-tab" href="/infra/help.html" target="_blank">
+                <i class="fa-solid fa-question"></i>&nbsp;Help
+            </a>
+            <a class="navbar-item is-tab" href="/infra/about.html" target="_blank">
+                <i class="fa-regular fa-address-card"></i>&nbsp;About
+            </a>
+        </div>
+        <!-- end of nav -->
+    </div>
+</nav>
+<!-- end navigation -->
+
+<!-- page header (title, etc) -->
+<div class="main-header">
+    <section class="hero is-small">
+        <div class="hero-body">
+            <div class="container is-max-desktop">
+                <div class="has-text-centered">
+                    <!-- header && subheader -->
+                    <h1 class="title is-4 is-spaced">Jogo do Eica</h1>
+                    <h4 class="subtitle is-5">Viva as aventuras de um homem pré-histórico.</h4>
+                    <!-- end of header && subheader -->
+
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+<!-- end page header -->
+
+<div class="container is-widescreen">
+    <div class="columns is-multiline is-centered has-text-centered">
+        <div class="column is-10">
+            <div id="pydiv" style="margin: auto;">
+                <img src="/image/alite_logo.jpg" alt="ALITE"
+                     style="width:100vw; height:100vh; object-fit: cover;"/>
+                <div style="position: absolute; top: 50%; left: 50%; opacity:0.3;
+            margin-top: -100px; margin-left: -100px; width: 200px; height: 200px;">
+                    <img src="https://imgur.com/uc56UAq.gif" width="200px" alt="LOADING"
+                         style=""/>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div style="position:absolute; top:700px; left:2px; height: 10px;margin:auto;">
+    <p>
+            <span id="_version_" style="color:#FFFFEE;font-size:8px;font-family:courier new,courier,monospace;">
+                {{version}}</span>
+    </p>
+</div>
+
+<!-- footer: will stick to the bottom -->
+<div class="footer footer-top-shadow">
+    <div class="container">
+        <!-- start of posts -->
+        <div class="columns is-centered">
+            <!-- start of post -->
+            <div class="column is-2">
+                <div class="card">
+                    <!-- image for post -->
+                    <div class="card-image">
+                        <figure class="image is-4by1">
+                            <a href="https://ufrj.br/">
+                                <img src="../image/ufrj-logo-8.png"  alt="UFRJ">
+                            </a>
+                        </figure>
+                    </div>
+                    <!-- end of image for post -->
+                </div>
+            </div>
+            <!-- end of post -->
+            <!-- start of post -->
+            <div class="column is-2">
+                <div class="card">
+                    <!-- image for post -->
+                    <div class="card-image">
+                        <figure class="image is-4by1">
+                            <a href="https://www.nce.ufrj.br/">
+                                <img src="../image/nce-logo-8.png" height="30px" alt="NCE">
+                            </a>
+                        </figure>
+                    </div>
+                    <!-- end of image for post -->
+                </div>
+            </div>
+            <!-- end of post -->
+            <!-- start of post -->
+            <div class="column is-2">
+                <div class="card">
+                    <!-- image for post -->
+                    <div class="card-image">
+                        <figure class="image is-4by1">
+                            <a href="https://labase.github.io/">
+                                <img src="../image/labase-logo-8.png" height="30px" alt="LABASE">
+                            </a>
+                        </figure>
+                    </div>
+                    <!-- end of image for post -->
+                </div>
+            </div>
+            <!-- end of post -->
+            <!-- start of post -->
+            <div class="column is-2">
+                <div class="card">
+                    <!-- image for post -->
+                    <div class="card-image">
+                        <figure class="image is-3by1">
+                            <a href="https://www.sbc.org.br/2-uncategorised/1939-programa-superpython">
+                                <img src="../image/sbc-logo-8.png" alt="SBC">
+                            </a>
+                        </figure>
+                    </div>
+                    <!-- end of image for post -->
+                </div>
+            </div>
+            <!-- end of post -->
+        </div>
+        <!-- end of posts -->
+    </div>
+    <div class="container has-text-centered">
+
+
+        <br>
+        <p>gaming platform by <a href="https://labase.github.io">https://labase.github.io</a></p>
+        <p>this platform is proudly open source</p>
+    </div>
+</div>
+
+</body>
+</html>

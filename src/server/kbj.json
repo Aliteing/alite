@@ -1,7 +1,8 @@
 {
   "step1": {
     "oid": "step1",
-    "parent_id": "LABASE",
+	"pid": "labase",
+    "parent_id": "board0",
     "desc": "REPOSIT\u00d3RIO",
     "task_ids": [
       "task16",
@@ -10,7 +11,8 @@
   },
   "step2": {
     "oid": "step2",
-    "parent_id": "LABASE",
+	"pid": "labase",
+    "parent_id": "board0",
     "desc": "PENDENTES",
     "color_id": "1",
     "task_ids": [
@@ -21,7 +23,8 @@
   },
   "step3": {
     "oid": "step3",
-    "parent_id": "LABASE",
+	"pid": "labase",
+    "parent_id": "board0",
     "desc": "PLANEJANDO",
     "color_id": "2",
     "task_ids": [
@@ -31,7 +34,8 @@
   },
   "step4": {
     "oid": "step4",
-    "parent_id": "LABASE",
+	"pid": "labase",
+    "parent_id": "board0",
     "desc": "DESPACHO",
     "color_id": "3",
     "task_ids": [
@@ -42,7 +46,8 @@
   },
   "step5": {
     "oid": "step5",
-    "parent_id": "LABASE",
+	"pid": "labase",
+    "parent_id": "board0",
     "desc": "EXECUTANDO",
     "color_id": "4",
     "task_ids": [
@@ -51,7 +56,8 @@
   },
   "step6": {
     "oid": "step6",
-    "parent_id": "LABASE",
+	"pid": "labase",
+    "parent_id": "board0",
     "desc": "TERMINADA",
     "color_id": "5",
     "task_ids": [
@@ -60,6 +66,7 @@
   },
   "task7": {
     "oid": "task7",
+	"pid": "labase",
     "parent_id": "step2",
     "desc": "Kanban Extras",
     "color_id": "7",
@@ -78,6 +85,7 @@
   },
   "task8": {
     "oid": "task8",
+	"pid": "labase",
     "parent_id": "task7",
     "desc": "How to link detached subtasks",
     "color_id": "2",
@@ -94,6 +102,7 @@
   },
   "task9": {
     "oid": "task9",
+	"pid": "labase",
     "parent_id": "step2",
     "desc": "Kanban Frontend",
     "color_id": "3",
@@ -118,6 +127,7 @@
   },
   "task10": {
     "oid": "task10",
+	"pid": "labase",
     "parent_id": "task16",
     "desc": "Design free columns",
     "color_id": "4",
@@ -139,6 +149,7 @@
   },
   "task11": {
     "oid": "task11",
+	"pid": "labase",
     "parent_id": "task16",
     "desc": "Include Horizontal Line for Heading",
     "color_id": "4",
@@ -156,6 +167,7 @@
   },
   "task12": {
     "oid": "task12",
+	"pid": "labase",
     "parent_id": "task16",
     "desc": "Switch to Cardboard Mode",
     "color_id": "5",
@@ -177,6 +189,7 @@
   },
   "task13": {
     "oid": "task13",
+	"pid": "labase",
     "parent_id": "step3",
     "desc": "Kanban - Epic",
     "color_id": "4",
@@ -200,6 +213,7 @@
   },
   "task14": {
     "oid": "task14",
+	"pid": "labase",
     "parent_id": "step1",
     "desc": "Dynamic design",
     "color_id": "3",
@@ -224,6 +238,7 @@
   },
   "task15": {
     "oid": "task15",
+	"pid": "labase",
     "parent_id": "task14",
     "desc": "Static design",
     "color_id": "1",
@@ -237,6 +252,7 @@
   },
   "task16": {
     "oid": "task16",
+	"pid": "labase",
     "parent_id": "step1",
     "desc": "Cardboard Story Organizer",
     "task_ids": [
@@ -253,6 +269,7 @@
   },
   "task17": {
     "oid": "task17",
+	"pid": "labase",
     "parent_id": "step4",
     "desc": "Kanban Sprinter",
     "color_id": "3",
@@ -272,6 +289,7 @@
   },
   "task18": {
     "oid": "task18",
+	"pid": "labase",
     "parent_id": "task7",
     "desc": "Choose Font Size",
     "color_id": "4",
@@ -284,6 +302,7 @@
   },
   "task19": {
     "oid": "task19",
+	"pid": "labase",
     "parent_id": "step6",
     "desc": "Kanban Spike",
     "color_id": "1",
@@ -297,67 +316,79 @@
   },
   "task20": {
     "oid": "task20",
+	"pid": "labase",
     "parent_id": "step5",
     "desc": "Kanban tags CRUD",
     "color_id": "8"
   },
   "task21": {
     "oid": "task21",
+	"pid": "labase",
     "parent_id": "task13",
     "desc": "Manage Menu",
     "color_id": "1"
   },
   "task22": {
     "oid": "task22",
+	"pid": "labase",
     "parent_id": "task13",
     "desc": "Improve tag formating"
   },
   "task23": {
     "oid": "task23",
+	"pid": "labase",
     "parent_id": "task13",
     "desc": "Fix click on task description",
     "color_id": "1"
   },
   "task24": {
     "oid": "task24",
+	"pid": "labase",
     "parent_id": "task13",
     "desc": "Improve Board view functions"
   },
   "task25": {
     "oid": "task25",
+	"pid": "labase",
     "parent_id": "task17",
     "desc": "Signal when saving complete",
     "color_id": "1"
   },
   "task26": {
     "oid": "task26",
+	"pid": "labase",
     "parent_id": "task7",
     "desc": "Restore Task delete",
     "color_id": "1"
   },
   "task27": {
     "oid": "task27",
+	"pid": "labase",
     "parent_id": "step2",
     "desc": "Kanban Icon CRUD - Epic"
   },
   "task28": {
     "oid": "task28",
+	"pid": "labase",
     "parent_id": "step4",
     "desc": "Add tags via hash in title</br>@@link, #tag, &partner,</br>%progress, @date"
   },
   "task29": {
     "oid": "task29",
+	"pid": "labase",
     "parent_id": "task9",
     "desc": "Smaler task height"
   },
   "task30": {
     "oid": "task30",
+	"pid": "labase",
     "parent_id": "task7",
     "desc": "Dynamic task sizes",
     "color_id": "2"
   },
   "task31": {
     "oid": "task31",
+	"pid": "labase",
     "parent_id": "step4",
     "desc": "Kanban BackEnd #d:f #n:d #c:s #s:e @7d",
     "color_id": "6",
@@ -369,28 +400,34 @@
   },
   "task32": {
     "oid": "task32",
+	"pid": "labase",
     "parent_id": "task31",
     "desc": "Backend Save all #s:p #d:f @2d",
     "color_id": "3"
   },
   "task33": {
     "oid": "task33",
+	"pid": "labase",
     "parent_id": "step3",
     "desc": "Drag task to board to timing #s:s #d:f #c:s @2d"
   },
   "task34": {
     "oid": "task34",
+	"pid": "labase",
     "parent_id": "task31",
     "desc": "Update/insert task #s:p #c:f @2d",
     "color_id": "4"
   },
   "task35": {
     "oid": "task35",
+	"pid": "labase",
     "parent_id": "task31",
     "desc": "Backend load all #s:p #d:f @2d"
   },
   "board": {
-    "oid": "LABASE",
+    "oid": "board0",
+	"pid": "labase",
+    "desc": "LABASE",
     "task_ids": [
       "step1",
       "step2",
