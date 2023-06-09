@@ -7,7 +7,7 @@ Alite - Plataforma Genérica de Conteúdo
 =======================================
  |Alite|
 
-Plataforma Genérica de Conteúdo
+Plataforma Genérica de Conteúdo Acadêmico
 
   |python| |license| |github|  |rtfd|
 
