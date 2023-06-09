@@ -1,5 +1,10 @@
+..
+    # This file is part of  program Alite
+    # Copyright © 2023  Carlo Oliveira <carlo@nce.ufrj.br>,
+    # `Labase <http://labase.selfip.org/>`_ - `NCE <http://portal.nce.ufrj.br>`_ - `UFRJ <https://ufrj.br/>`_.
+    # SPDX-License-Identifier: `GNU General Public License v3.0 or later <http://is.gd/3Udt>`_
 Plataforma Genérica de Conteúdo
-==============================
+===============================
 Changelog
 =========
 
@@ -11,6 +16,15 @@ The format is based on `Keep a Changelog`_.
 `Unreleased`_
 -------------
 - to be defined
+
+`23.06`_
+----------------
+
+Added
++++++
+
+* alite games monolithic deployed (01)
+* moved tag insertion to init demo (02)
 
 `23.03`_
 ----------------
@@ -47,6 +61,7 @@ LABASE_ - NCE_ - UFRJ_
 .. _NCE: http://nce.ufrj.br
 .. _UFRJ: http://www.ufrj.br
 .. _Keep a Changelog: https://keepachangelog.com/en/1.0.0/
+.. _23.06: https://github.com/Aliteing/alite/releases
 .. _23.03: https://github.com/Aliteing/alite/releases
 .. _23.02: https://github.com/Aliteing/alite/releases
 
