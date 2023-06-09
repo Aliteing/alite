@@ -43,7 +43,7 @@ LABASE_ - NCE_ - UFRJ_
 .. _UFRJ: https://ufrj.br
 .. _Universidade Federal do Rio de Janeiro: https://ufrj.br
 .. _Carlo E. T. Oliveira: http://carlo.activufrj.nce.ufrj.br
-.. _23.06: https://github.com/Aliteing/alite/releases
+.. _23.06: https://github.com/Aliteing/alite/releases/tag/alite-games_23.06
 
 .. _Projeto Alite: https://activufrj.nce.ufrj.br/raw/wiki/labase/alite_page
 
@@ -51,7 +51,7 @@ LABASE_ - NCE_ - UFRJ_
    :target: https://imgur.com/hib4z1f
 
 .. |github| image:: https://img.shields.io/badge/release-23.06-blue
-   :target: https://github.com/Aliteing/alite/releases
+   :target: https://github.com/Aliteing/alite/releases/tag/alite-games_23.06
 
 
 .. |LABASE| image:: https://i.imgur.com/vxJMfrM.png
