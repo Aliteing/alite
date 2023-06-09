@@ -1,0 +1,8 @@
+.git
+.gitignore
+.idea
+Dockerfile*
+docker-compose*
+README.rst
+CHANGELOG.rst
+LICENSE
