@@ -2,8 +2,8 @@
 # Added Labels, change -m to main, expose 8084
 FROM python:3.12.0a5-alpine3.17
 LABEL labase.author="carlo@ufrj.br"
-LABEL version="23.05"
-LABEL description="Alite education platform configured for games"
+LABEL version="23.06-dash"
+LABEL description="Alite education platform configured for games - datascience dashboard"
 # Install python and pip
 # RUN apk add --no-cache --update python3 py-pip bash
 ADD ./requirements.txt /tmp/requirements.txt
@@ -19,7 +19,7 @@ RUN mkdir -p /var/www/alite
 # Add kwarwp files to the image.
 ADD . /var/www/alite
 
-WORKDIR /var/www/alite/src/server
+WORKDIR /var/www/alite/src/dash
 
 # Expose is NOT supported by Heroku
 EXPOSE 8084
