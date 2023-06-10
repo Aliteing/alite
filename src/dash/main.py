@@ -7,12 +7,12 @@
 Changelog
 ---------
 .. versionadded::    23.06
-        first version of main (09)
+   |br| first version of main (09)
 
-    This file is part of  program Alite
-    Copyright © 2023  Carlo Oliveira <carlo@nce.ufrj.br>,
-    `Labase <http://labase.selfip.org/>`_ - `NCE <http://portal.nce.ufrj.br>`_ - `UFRJ <https://ufrj.br/>`_.
-    SPDX-License-Identifier: `GNU General Public License v3.0 or later <http://is.gd/3Udt>`_.
+|   **Open Source Notification:** This file is part of open source program **Alite**
+|   **Copyright © 2023  Carlo Oliveira** <carlo@nce.ufrj.br>,
+|   **SPDX-License-Identifier:** `GNU General Public License v3.0 or later <http://is.gd/3Udt>`_.
+|   `Labase <http://labase.selfip.org/>`_ - `NCE <http://portal.nce.ufrj.br>`_ - `UFRJ <https://ufrj.br/>`_.
 
 """
 from dash import Configuration as Cfg

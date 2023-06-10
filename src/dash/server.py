@@ -2,18 +2,32 @@
 # -*- coding: UTF8 -*-
 """ Servidor web entregando o serviço em html.
 
-.. codeauthor:: Carlo Oliveira <carlo@nce.ufrj.br>
+
+Classes neste módulo:
+    - :py:class:`BaseRequestHandler` Funções comuns para os gerentes de Chamada .
+    - :py:class:`DefaultHandler`     Gerencia chamadas defeituosas.
+    - :py:class:`HomeRequestHandler` Chamadas para a página inicial.
+    - :py:class:`DashRequestHandler` Chamadas para a fachada de serviços.
+
+Funções neste módulo:
+    - :py:func:`make_server_app` Configura as rotas e parâmetros iniciais do servidor.
+    - :py:func:`run_server` Executa o laço assíncrono do servidor.
+    - :py:func:`main` Função principal que chama o run_server e make_server_app.
 
 Changelog
 ---------
-.. versionadded::    23.06
-        first version of main (09)
-        add homepage, boiler and about (10)
 
-    This file is part of  program Alite
-    Copyright © 2023  Carlo Oliveira <carlo@nce.ufrj.br>,
-    `Labase <http://labase.selfip.org/>`_ - `NCE <http://portal.nce.ufrj.br>`_ - `UFRJ <https://ufrj.br/>`_.
-    SPDX-License-Identifier: `GNU General Public License v3.0 or later <http://is.gd/3Udt>`_.
+.. versionadded::    23.06
+    |br| add :class:`HomeRequestHandler`,
+    |br| :meth:`BaseRequestHandler.check_modal`, boiler and about (10)
+
+
+|   **Open Source Notification:** This file is part of open source program **Alite**
+|   **Copyright © 2023  Carlo Oliveira** <carlo@nce.ufrj.br>,
+|   **SPDX-License-Identifier:** `GNU General Public License v3.0 or later <http://is.gd/3Udt>`_.
+|   `Labase <http://labase.selfip.org/>`_ - `NCE <http://portal.nce.ufrj.br>`_ - `UFRJ <https://ufrj.br/>`_.
+
+.. codeauthor:: Carlo Oliveira <carlo@nce.ufrj.br>
 
 """
 import tornado.template
@@ -31,12 +45,24 @@ version__ = Cfg.version
 
 # noinspection PyAttributeOutsideInit
 class BaseRequestHandler(RequestHandler):
+    """ Classe antecessora dos requests.
+    """
+
     def initialize(
             self,
             service: RpcProxy(Cfg.dash_srv), config=None,
             status_code=404,
             message='Unknown Endpoint'
     ) -> None:
+        """ Inicializa os requests.
+
+        Declara um conjunto de parâmetros iniciais da chamada base.
+
+        :param     service: Serviço rpc.
+        :param      config: Configuração para os chamados.
+        :param status_code: O estado para retornar no chamado.
+        :param     message: Mensagem explicando o código de retorno.
+        """
         self.service = service
         self.reason = message
         _ = status_code, config
@@ -45,9 +71,20 @@ class BaseRequestHandler(RequestHandler):
         self.about, self.help = "", ""
 
     def check_modal(self, op) -> None:
+        """ Decide se tem que ligar ou desligar o painel modal.
+
+        :param op: Operação recebida para ser avaliada.
+        :return: Nenhum
+        """
         self.about = "is-active" if op == "_" else ""
 
     def do_load(self, template=Cfg.BOIL_TPL, **kwargs: Any) -> None:
+        """
+
+        :param template: O arquivo de gabarito a ser usado.
+        :param kwargs: Os parâmetros usados na geração do gabarito.
+        :return: None
+        """
         template_ = tornado.template.Loader(Cfg.tpl)
         self.finish(template_.load(template).generate(
             version=Cfg.version, about=self.about, help=self.help, **kwargs))
@@ -66,16 +103,32 @@ class BaseRequestHandler(RequestHandler):
 
 
 class DefaultHandler(RequestHandler):
+    """ Captura as rotas defeituosas e apresenta a tela de erro.
+
+    """
     def prepare(self):
+        """ Captura as rotas defeituosas e apresenta a tela de erro.
+
+        :return: None
+        """
         # Use prepare() to handle all the HTTP methods
         self.set_status(404)
         self.render(Cfg.ERR_TPL, titulo="Alite - Erro 404", version=Cfg.version, about="")
 
 
 class HomeRequestHandler(BaseRequestHandler):
+    """ Captura chamadas para a página inicial.
+
+    """
 
     async def get(self, op=None):
+        """ Captura chamadas para a página inicial.
+
+        :param op: Operação REST da requisição.
+        :return: None
+        """
         self.check_modal(op)
+        """ Verifica se a operação pedida é transição do painel modal. """
         self.set_status(200)
         self.do_load()
 
