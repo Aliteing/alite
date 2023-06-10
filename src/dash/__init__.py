@@ -54,10 +54,12 @@ class Configuration:
     dash_srv = "datascience_dash_service"
     STT_PATH = r"/image/(.*)"
     CSS_PATH = r"/css/(.*\.css)"
-    GET_POINT = r'/chart/?'
+    GET_POINT = r'/chart/?(.?)'
+    # GET_GAMES = r'/chart/(?P<id>[a-zA-Z0-9-]+)/?'
     GET_GAMES = r'/chart/(?P<id>[a-zA-Z0-9-]+)/?'
     ERR_TPL = "erro404.html"
     DASH_TPL = "dash.html"
+    BOIL_TPL = "boiler.html"
     AMQP_URI = "amqp://guest:guest@127.0.0.1:5672"
     config = {'AMQP_URI': AMQP_URI}
     debug = False

@@ -8,6 +8,7 @@ Changelog
 ---------
 .. versionadded::    23.06
         first version of main (09)
+        add homepage, boiler and about (10)
 
     This file is part of  program Alite
     Copyright © 2023  Carlo Oliveira <carlo@nce.ufrj.br>,
@@ -24,6 +25,9 @@ from nameko.rpc import RpcProxy
 from typing import Any, Tuple, AnyStr
 from dash import Configuration as Cfg
 
+# tornado.template.execute(about=lambda *_: "")
+version__ = Cfg.version
+
 
 # noinspection PyAttributeOutsideInit
 class BaseRequestHandler(RequestHandler):
@@ -36,6 +40,17 @@ class BaseRequestHandler(RequestHandler):
         self.service = service
         self.reason = message
         _ = status_code, config
+        __version__ = Cfg.version
+        self.version__ = Cfg.version
+        self.about, self.help = "", ""
+
+    def check_modal(self, op) -> None:
+        self.about = "is-active" if op == "_" else ""
+
+    def do_load(self, template=Cfg.BOIL_TPL, **kwargs: Any) -> None:
+        template_ = tornado.template.Loader(Cfg.tpl)
+        self.finish(template_.load(template).generate(
+            version=Cfg.version, about=self.about, help=self.help, **kwargs))
 
     def write_error(self, status_code: int, **kwargs: Any) -> None:
         self.set_header(
@@ -54,12 +69,21 @@ class DefaultHandler(RequestHandler):
     def prepare(self):
         # Use prepare() to handle all the HTTP methods
         self.set_status(404)
-        self.render(Cfg.ERR_TPL, titulo="Alite - Erro 404", version=Cfg.version)
+        self.render(Cfg.ERR_TPL, titulo="Alite - Erro 404", version=Cfg.version, about="")
+
+
+class HomeRequestHandler(BaseRequestHandler):
+
+    async def get(self, op=None):
+        self.check_modal(op)
+        self.set_status(200)
+        self.do_load()
 
 
 class DashRequestHandler(BaseRequestHandler):
 
-    async def get(self):
+    async def get(self, op=None):
+        self.check_modal(op)
         from nameko.standalone.rpc import ClusterRpcProxy
         # from dash.service import DashService
         # from nameko.testing.services import worker_factory
@@ -67,8 +91,7 @@ class DashRequestHandler(BaseRequestHandler):
         with ClusterRpcProxy(Cfg.config) as cluster_rpc:
             image = cluster_rpc.datascience_dash_service.plot_pontos()
         self.set_status(200)
-        template = tornado.template.Loader(Cfg.tpl)
-        await self.finish(template.load(Cfg.DASH_TPL).generate(image=image))
+        self.do_load(Cfg.DASH_TPL, image=image)
 
 
 def make_server_app(
@@ -80,6 +103,7 @@ def make_server_app(
         [
             (Cfg.GET_POINT, DashRequestHandler, dict(service=service, config=config)),
             (Cfg.GET_GAMES, DashRequestHandler, dict(service=service, config=config)),
+            (r"/(.?)", HomeRequestHandler, dict(service=service, config=config)),
             (Cfg.STT_PATH, StaticFileHandler, {'path': Cfg.img}),
             (Cfg.CSS_PATH, StaticFileHandler, {'path': Cfg.css}),
         ],
@@ -95,23 +119,17 @@ def make_server_app(
 define('port', default=Cfg.port, help='port to listen on')
 
 
-def run_server(
-        app: tornado.web.Application,
-        port: int,
-):
+def run_server(app: tornado.web.Application, port: int):
     _port = int(options.port or port)
     http_server = HTTPServer(app)
-    http_server.listen(_port)  # , '', **http_server_args)
+    http_server.listen(_port)
     print('Listening on http://localhost:%i' % _port)
     IOLoop.current().start()
 
 
 def main(args=Cfg):
     addr_service, dash_app = make_server_app(config=args.dash_srv, debug=args.debug)
-    run_server(
-        app=dash_app,
-        port=args.port,
-    )
+    run_server(app=dash_app, port=args.port,)
 
 
 if __name__ == '__main__':
