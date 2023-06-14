@@ -2,18 +2,23 @@
 # -*- coding: UTF8 -*-
 """ Ponto de entrada do dashboard service.
 
-.. codeauthor:: Carlo Oliveira <carlo@nce.ufrj.br>
+Classes neste módulo:
+    - :py:class:`DashService` Serviços de plotagem dos dados de Alite-Games.
+    - :py:meth:`DashService.plot_pontos` Plota o número de jogos executados no Alite-games e retorna um plot.
 
 Changelog
 ---------
 .. versionadded::    23.06
-        first version of main (09)
-        added person pontos (09)
+    |br| first version of main (09)
+    |br| added person pontos (09)
+    |br| added more documentation (14)
 
-    This file is part of  program Alite
-    Copyright © 2023  Carlo Oliveira <carlo@nce.ufrj.br>,
-    `Labase <http://labase.selfip.org/>`_ - `NCE <http://portal.nce.ufrj.br>`_ - `UFRJ <https://ufrj.br/>`_.
-    SPDX-License-Identifier: `GNU General Public License v3.0 or later <http://is.gd/3Udt>`_.
+|   **Open Source Notification:** This file is part of open source program **Alite**
+|   **Copyright © 2023  Carlo Oliveira** <carlo@nce.ufrj.br>,
+|   **SPDX-License-Identifier:** `GNU General Public License v3.0 or later <https://is.gd/3Udt>`_.
+|   `Labase <http://labase.selfip.org/>`_ - `NCE <http://portal.nce.ufrj.br>`_ - `UFRJ <https://ufrj.br/>`_.
+
+.. codeauthor:: Carlo Oliveira <carlo@nce.ufrj.br>
 
 """
 from nameko.rpc import rpc
@@ -22,6 +27,9 @@ from dash import Configuration as Cfg
 
 
 class DashService:
+    """ Serviços de plotagem dos dados de Alite-Games.
+
+    """
     name = Cfg.dash_srv
 
     def __init__(self):
@@ -29,6 +37,11 @@ class DashService:
         self.df: DataFrame = DataFrame()
 
     def person_load(self, person=Cfg.person_url):
+        """ Carrega as informações de dados a partir de um servidor num arcabouço.
+
+        :param person: Url que endereça os dados necessários
+        :return: None
+        """
         import urllib.request
         import json
         import pandas as pd
@@ -39,6 +52,10 @@ class DashService:
 
     @rpc
     def plot_pontos(self):
+        """ Plota o número de jogos executados no Alite-games.
+
+        :return: O gráfico plotado em forma se sequência codificada em base64
+        """
         import seaborn as sns
         from matplotlib import pyplot as plt
         self.person_load()

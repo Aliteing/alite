@@ -5,16 +5,47 @@
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+""" Configuration file for the Sphinx documentation builder.
+
+Changelog
+---------
+.. versionadded::    23.06
+    |br| first version of config (09)
+    |br| added attempt to mock decorators (14)
+
+|   **Open Source Notification:** This file is part of open source program **Alite**
+|   **Copyright © 2023  Carlo Oliveira** <carlo@nce.ufrj.br>,
+|   **SPDX-License-Identifier:** `GNU General Public License v3.0 or later <https://is.gd/3Udt>`_.
+|   `Labase <http://labase.selfip.org/>`_ - `NCE <http://portal.nce.ufrj.br>`_ - `UFRJ <https://ufrj.br/>`_.
+
+.. codeauthor:: Carlo Oliveira <carlo@nce.ufrj.br>
+
+"""
 import sys
 import pathlib
 import unittest.mock as mock
 path = pathlib.Path(__file__).parent.parent.parent / "src"
 sys.path.insert(0, str(path))
 from dash import Configuration as Cfg
+from functools import wraps
+
+
+def mock_decorator(*args, **kwargs):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
 
 MOCK_MODULES = ['nameko', 'matplotlib', 'seaborn', 'nameko.rpc']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
+# mock.patch('nameko.rpc.rpc', mock_decorator).start()
+mock_rpc = mock.Mock(name="mock_rpc_decorator")
+mock_rpc.rpc.return_value.side_effect = mock_decorator
+sys.modules['nameko.rpc'] = mock_rpc
 
 project = 'Alite-Dash'
 copyright = f'© 2023, Carlo E. T. Oliveira, version {Cfg.version}'
