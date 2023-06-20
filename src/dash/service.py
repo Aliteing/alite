@@ -91,7 +91,6 @@ class WiscPlot:
         val_list = [joiner(val.cc, val.ct, 0) + joiner(val.cf, val.ct, 1) + joiner(val.cn, val.ct, 2) for val in
                     val_list0]
         val_list1 = val_list[1:] + [0]
-        conserve = [(int(a.ok)) for a, b in zip(point_list, new_list)]
         conservation = [counter(a.ok, b.ok) for a, b in zip(point_list, new_list)]
         perseveration = [counter(a.no, b.no) for a, b in zip(point_list, new_list)]
         oposition = [counter(a.td, b.td) for a, b in zip(point_list, new_list)]
@@ -201,6 +200,7 @@ class DashService:
     def __init__(self):
         self.person_url = Cfg.person_url
         self.df: DataFrame = DataFrame()
+        self.wisc_plot = WiscPlot()
 
     @staticmethod
     def person_load(person=Cfg.person_url):
@@ -260,6 +260,17 @@ class DashService:
         _ = chart.set_xticklabels(chart.get_xticklabels(), rotation=45, horizontalalignment='right')
 
     @rpc
+    def plot_chart(self, chart_index):
+        """ Plota um gráfico escolhido no Alite-games.
+
+        :param chart_index: Índice para a coleção de plotagens disponíveis
+        :return: O gráfico plotado em forma se sequência codificada em base64
+        """
+        self.df = DataFrame(self.person_load())
+        figure = self.wisc_plot.run_plotting(chart_index, self.df)
+        return self.to_base64(figure)
+
+    @rpc
     def plot_pontos(self):
         """ Plota o número de jogos executados no Alite-games.
 
@@ -275,11 +286,11 @@ class DashService:
         return self.to_base64()
 
     @staticmethod
-    def to_base64():
+    def to_base64(plt_=plt):
         from io import BytesIO
         img = BytesIO()
-        plt.savefig(img, format='png')
-        plt.close()
+        plt_.savefig(img, format='png')
+        plt_.close()
         img.seek(0)
         import base64
         plot_url = base64.b64encode(img.getvalue()).decode('utf8')

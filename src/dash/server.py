@@ -20,6 +20,7 @@ Changelog
 .. versionadded::    23.06
     |br| add :class:`HomeRequestHandler`,
     |br| :meth:`BaseRequestHandler.check_modal`, boiler and about (10)
+    |br| :meth:`BaseRequestHandler.check_modal`, boiler and about (10)
 
 
 |   **Open Source Notification:** This file is part of open source program **Alite**
@@ -134,15 +135,30 @@ class HomeRequestHandler(BaseRequestHandler):
 
 
 class DashRequestHandler(BaseRequestHandler):
+    """ Manuseia requisições para o rpc dash_service
 
-    async def get(self, op=None):
+    """
+
+    async def get(self, op=None, id=None):
+        """ Obtém images enviadas pelo dash_service retornando um gráfico pedido.
+
+        :param op: Câmbio do estado do modal entre ativo e inativo
+        :param id: Tipo do gráfico pedido a ser enviado para o dash
+        :return: (os dados da imagem codificados em base64)
+        """
+        def plot_pontos(cluster):
+            return cluster.datascience_dash_service.plot_pontos()
+
+        def plot_chart(cluster):
+            return cluster.datascience_dash_service.plot_chart(id)
         self.check_modal(op)
+        kind = "plot factor violin hist heat".split()
         from nameko.standalone.rpc import ClusterRpcProxy
         # from dash.service import DashService
         # from nameko.testing.services import worker_factory
         # self.service = worker_factory(DashService)
         with ClusterRpcProxy(Cfg.config) as cluster_rpc:
-            image = cluster_rpc.datascience_dash_service.plot_pontos()
+            image = plot_chart(cluster_rpc) if id in kind else plot_pontos(cluster_rpc)
         self.set_status(200)
         self.do_load(Cfg.DASH_TPL, image=image)
 
@@ -152,6 +168,7 @@ def make_server_app(
         debug: bool
 ) -> Tuple[RpcProxy, Application]:
     service = RpcProxy(config)
+    get_games = r'/chart/(?P<id>[a-zA-Z0-9-]+)/?'
     app = Application(
         [
             (Cfg.GET_POINT, DashRequestHandler, dict(service=service, config=config)),
