@@ -2,10 +2,15 @@
 # -*- coding: UTF8 -*-
 """ Inicialização geral do módulo dash
 
-This file is part of  program Alite
-Copyright © 2023  Carlo Oliveira <carlo@nce.ufrj.br>,
-`Labase <http://labase.selfip.org/>`_ - `NCE <http://portal.nce.ufrj.br>`_ - `UFRJ <https://ufrj.br/>`_.
-SPDX-License-Identifier: `GNU General Public License v3.0 or later <http://is.gd/3Udt>`_.
+Changelog
+---------
+.. versionadded::    23.06
+   |br| new plotting url at :class:`Configuration` (10)
+
+|   **Open Source Notification:** This file is part of open source program **Alite**
+|   **Copyright © 2023  Carlo Oliveira** <carlo@nce.ufrj.br>,
+|   **SPDX-License-Identifier:** `GNU General Public License v3.0 or later <http://is.gd/3Udt>`_.
+|   `Labase <http://labase.selfip.org/>`_ - `NCE <http://portal.nce.ufrj.br>`_ - `UFRJ <https://ufrj.br/>`_.
 
 """
 __version__ = "23.06"
@@ -51,6 +56,7 @@ class Configuration:
     img = pathlib.Path(__file__).parent / "image"
     css = pathlib.Path(__file__).parent / "css"
     person_url = 'https://games.alite.selfip.org/score/players'
+    game_url = 'https://games.alite.selfip.org/score/games?oid={}'
     dash_srv = "datascience_dash_service"
     STT_PATH = r"/image/(.*)"
     CSS_PATH = r"/css/(.*\.css)"
@@ -64,5 +70,3 @@ class Configuration:
     config = {'AMQP_URI': AMQP_URI}
     debug = False
     service = None
-
-
