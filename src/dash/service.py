@@ -13,6 +13,7 @@ Changelog
     |br| added person pontos (09)
     |br| added more documentation (14)
     |br| added plotting class draft (19)
+    |br| added initial templating method (21)
 
 |   **Open Source Notification:** This file is part of open source program **Alite**
 |   **Copyright © 2023  Carlo Oliveira** <carlo@nce.ufrj.br>,
@@ -27,11 +28,14 @@ import urllib.request
 from collections import namedtuple
 import seaborn as sns
 from matplotlib import pyplot as plt
-from nameko.rpc import rpc
 from pandas import DataFrame
 import pandas as pd
 import numpy as np
 from dash import Configuration as Cfg
+import ssl
+
+ssl.SSLContext.verify_mode = ssl.VerifyMode.CERT_OPTIONAL
+from nameko.rpc import rpc
 
 
 class WiscPlot:
@@ -108,14 +112,17 @@ class WiscPlot:
         # self.df = _df
         return _df
 
-    def plot(self, cfg: Cfplot):
-        import seaborn as sbn
+    def plot_template(self, cfg: Cfplot, runner):
         from matplotlib import pyplot as plt_
         _ = plt_.figure(figsize=(15, 8))
-        chart_ = sbn.countplot(data=self.df, x="name", hue=cfg.col)
+        chart_ = runner()
         _ = chart_.set(title=cfg.title, ylabel=cfg.ylabel, xlabel=cfg.xlabel)
         _ = chart_.set_xticklabels(chart_.get_xticklabels(), rotation=45, horizontalalignment='right')
         return plt_
+
+    def plot(self, cfg: Cfplot):
+        import seaborn as sbn
+        return self.plot_template(cfg, lambda: sbn.countplot(data=self.df, x="name", hue=cfg.col))
 
     def factorplot(self, cfg: Cfplot):
         import seaborn as sbn

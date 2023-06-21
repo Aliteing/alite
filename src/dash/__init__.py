@@ -6,6 +6,7 @@ Changelog
 ---------
 .. versionadded::    23.06
    |br| new plotting url at :class:`Configuration` (10)
+   |br| plotting kind at :class:`Configuration` (21)
 
 |   **Open Source Notification:** This file is part of open source program **Alite**
 |   **Copyright © 2023  Carlo Oliveira** <carlo@nce.ufrj.br>,
@@ -57,6 +58,7 @@ class Configuration:
     css = pathlib.Path(__file__).parent / "css"
     person_url = 'https://games.alite.selfip.org/score/players'
     game_url = 'https://games.alite.selfip.org/score/games?oid={}'
+    plot_kind = "plot factor violin hist heat".split()
     dash_srv = "datascience_dash_service"
     STT_PATH = r"/image/(.*)"
     CSS_PATH = r"/css/(.*\.css)"

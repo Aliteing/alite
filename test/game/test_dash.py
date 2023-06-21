@@ -11,6 +11,7 @@ Changelog
 .. versionadded::    23.06
     |br| added TestDashService (20)
     |br| added TestDashHandler (20)
+    |br| test all plotting services (21)
 
 |   **Open Source Notification:** This file is part of open source program **Alite**
 |   **Copyright © 2023  Carlo Oliveira** <carlo@nce.ufrj.br>,
@@ -57,14 +58,20 @@ class TestDashService(unittest.TestCase):
         self.assertIsInstance(service.wisc_plot, WiscPlot, "failed to create WiscPlot")
         self.assertIsInstance(service.df, DataFrame, "failed  to create DataFrame")
 
-    @patch('seaborn.heatmap', MagicMock(name="seaborn"))
+    @patch('pandas.DataFrame', MagicMock(name="pd_dataframe"))
     def test_plot_chart(self):
-        with patch('pandas.DataFrame', create=True) as mock_pandas:
-            # mock_urlopen.__enter__ = MOCK_URL
+        plot_kind = "countplot catplot violinplot histplot heatmap".split()
+
+        plot = {k: v for k, v in zip(Cfg.plot_kind, plot_kind)}
+        with patch('pandas.melt', create=True) as mock_pandas:
             mock_pandas.__enter__.return_value = MOCK_URL  # self.mock_url
             # MOCK_URL.read.decode.return_value = b""
-            data = self.dash.plot_chart("heat")
-            self.assertLess(1000, len(data), "failed retrieve main")
+            plot.pop("factor")
+            for kind, function in plot.items():
+                with patch(f'seaborn.{plot[kind]}'):
+                    data = self.dash.plot_chart(kind)
+                    # print(mock_seaborne, mock_seaborne.__enter__)
+                    self.assertLess(1000, len(data), "failed retrieve main")
 
 
 class TestDashHandler(AsyncHTTPTestCase):
