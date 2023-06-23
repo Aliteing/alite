@@ -1,25 +1,33 @@
 {% extends "boiler.html" %}
 {% block main %}
-<!-- start of about -->
-<div class="column is-8">
-    <div class="card">
-        <!-- about header-->
-        <div class="card-content-header has-text-centered">
-            <h4 class="title is-4">ALITE</h4>
-        </div>
-        <!-- end of about header -->
+    {% for line_menu in chart_menu %}
+        {% for a_chart, a_top, a_left, a_name, a_leg in line_menu %}
+            <!-- start of post -->
+            <div class="column is-4">
+                <div class="card">
+                    <!-- image for post -->
+                    <div class="card is-4by4" style="height:240px; overflow:hidden;">
+                        <figure>
+                            <a href="/chart/{{ a_chart }}">
+                                <img src="/image/sns_menu.jpg" alt="Image"
+                                     style="position:relative; min-width:2790px;
+                                                  top:{{ a_top }}px; left:{{ a_left }}px;" width="30%"
+                                >
+                            </a>
+                        </figure>
+                    </div>
+                    <!-- end of image for post -->
 
-        <!-- about content -->
-        <div class="card-image">
-            <figure class="image is-4by3">
-                <img src="data:image/png;base64,{{ image }}" alt="Alite Chart"/>
-            </figure>
-        </div>
-        <div class="card-content">
-            ....
-        </div>
-    </div>
-</div>
-<!-- end of about column -->
+                    <!-- post header -->
+                    <div class="card-content-header">
+                        <!--h6 class="title is-6"><a href="//supygirls/moduler/ada">Ada</a></h6-->
+                        <h5 class="title is-5"><a href="/chart/{{ a_chart }}">{{ a_name }}</a></h5>
+                    </div>
+                    {{ a_leg }}
+                </div>
+            </div>
+            <!-- end of post -->
+        {% end %}
+    {% end %}
 {% end %}
 

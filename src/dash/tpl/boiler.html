@@ -36,6 +36,16 @@
 
         }
 
+       .bg-img {
+            background-image: url(https://i.imgur.com/iYesNKv.jpg) ;
+            background-position: center center;
+            background-repeat:  no-repeat;
+            background-attachment: fixed;
+            background-size:  cover;
+            background-color: #999;
+
+     }
+
 
 
 
@@ -43,15 +53,15 @@
 
 </head>
 <!--<body bgcolor="#003333" onload="brython({debug: 1})">-->
-<body background-color="darkslategrey">
+<body background-color="slate">
 
 <!-- navigation -->
 <nav class="navbar is-transparent">
     <div class="navbar-brand">
-<!--        <a class="navbar-item" href="https://labase.github.io">-->
-<!--            <img src="/image/alite_logo.jpg" alt="ALITE" width="26" height="28">-->
-<!--        </a>-->
-            {% include "menu.html" %}
+        <!--        <a class="navbar-item" href="https://labase.github.io">-->
+        <!--            <img src="/image/alite_logo.jpg" alt="ALITE" width="26" height="28">-->
+        <!--        </a>-->
+        {% include "menu.html" %}
         <div class="navbar-start">
             <a class="navbar-item" href="/">
                 ALITE
@@ -71,7 +81,7 @@
             <a class="navbar-item is-tab" href="/infra/help.html" target="_blank">
                 <i class="fa-solid fa-question"></i>&nbsp;Help
             </a>
-<!--            <a class="navbar-item is-tab" href="#" target="_blank">-->
+            <!--            <a class="navbar-item is-tab" href="#" target="_blank">-->
             <a class="navbar-item is-tab" href="_">
                 <i class="fa-regular fa-address-card"></i>&nbsp;About
             </a>
@@ -81,7 +91,7 @@
 </nav>
 <!-- end navigation -->
 <!-- page content -->
-<div class="main-content">
+<div class="main-content bg-img">
     <div class="container">
         <!-- start of about -->
         <div class="columns is-multiline is-centered">
@@ -191,11 +201,11 @@
     </div>
 </div>
 <div class="modal {{ about }} is-large">
-  <div class="modal-background"></div>
-  <div class="modal-content" style="min-width:900px !important;">
-      {% include about.html %}
-  </div>
-  <button class="modal-close is-large" aria-label="close" onclick="window.location.href='0';"></button>
+    <div class="modal-background"></div>
+    <div class="modal-content" style="min-width:900px !important;">
+        {% include about.html %}
+    </div>
+    <button class="modal-close is-large" aria-label="close" onclick="window.location.href='0';"></button>
 </div>
 </body>
 </html>

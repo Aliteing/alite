@@ -7,7 +7,8 @@ Classes neste módulo:
     - :py:class:`BaseRequestHandler` Funções comuns para os gerentes de Chamada .
     - :py:class:`DefaultHandler`     Gerencia chamadas defeituosas.
     - :py:class:`HomeRequestHandler` Chamadas para a página inicial.
-    - :py:class:`DashRequestHandler` Chamadas para a fachada de serviços.
+    - :py:class:`DashRequestHandler` Menu com os tipos de gráficos oferecidos.
+    - :py:class:`PlotRequestHandler` Chamadas para a fachada de serviços.
 
 Funções neste módulo:
     - :py:func:`make_server_app` Configura as rotas e parâmetros iniciais do servidor.
@@ -21,6 +22,7 @@ Changelog
     |br| add :class:`HomeRequestHandler`,
     |br| :meth:`BaseRequestHandler.check_modal`, boiler and about (10)
     |br| :meth:`BaseRequestHandler.check_modal`, boiler and about (10)
+    |br| :class:`PlotRequestHandler`, plot & dash, menu boiler review (23)
 
 
 |   **Open Source Notification:** This file is part of open source program **Alite**
@@ -135,22 +137,48 @@ class HomeRequestHandler(BaseRequestHandler):
 
 
 class DashRequestHandler(BaseRequestHandler):
+    """ Gerencia o menu para criar uma grade de opções
+
+    """
+
+    async def get(self, op=None, mid=None):
+        """ Obtém images enviadas pelo dash_service retornando um gráfico pedido.
+
+        :param op: Câmbio do estado do modal entre ativo e inativo
+        :param mid: Tipo dos gráficos pedidos a ser enviado para o dash
+        :return: (Um gabarito do painel com a lista de dados descritivos)
+        """
+        self.check_modal(op)
+        _ = mid
+        kind = "plot factor violin hist heat".split()
+        icon = [(6, 5), (3, 2), (6, 0), (2, 2), (5, 4)]
+        kind = list(zip(kind, kind, kind, icon))
+        chart_menu = [
+            [(a_chart, iy * -400 - 64, ix * -396, a_name, a_leg) for a_chart, a_name, a_leg, (ix, iy)
+             in line_menu]
+            for _, line_menu in enumerate([kind[:3], kind[3:]])
+        ]
+        self.set_status(200)
+        self.do_load(Cfg.DASH_TPL, chart_menu=chart_menu)
+
+
+class PlotRequestHandler(BaseRequestHandler):
     """ Manuseia requisições para o rpc dash_service
 
     """
 
-    async def get(self, op=None, id=None):
+    async def get(self, op=None, pid=None):
         """ Obtém images enviadas pelo dash_service retornando um gráfico pedido.
 
         :param op: Câmbio do estado do modal entre ativo e inativo
-        :param id: Tipo do gráfico pedido a ser enviado para o dash
+        :param pid: Tipo do gráfico pedido a ser enviado para o dash
         :return: (os dados da imagem codificados em base64)
         """
         def plot_pontos(cluster):
             return cluster.datascience_dash_service.plot_pontos()
 
         def plot_chart(cluster):
-            return cluster.datascience_dash_service.plot_chart(id)
+            return cluster.datascience_dash_service.plot_chart(pid)
         self.check_modal(op)
         kind = "plot factor violin hist heat".split()
         from nameko.standalone.rpc import ClusterRpcProxy
@@ -158,9 +186,9 @@ class DashRequestHandler(BaseRequestHandler):
         # from nameko.testing.services import worker_factory
         # self.service = worker_factory(DashService)
         with ClusterRpcProxy(Cfg.config) as cluster_rpc:
-            image = plot_chart(cluster_rpc) if id in kind else plot_pontos(cluster_rpc)
+            image = plot_chart(cluster_rpc) if pid in kind else plot_pontos(cluster_rpc)
         self.set_status(200)
-        self.do_load(Cfg.DASH_TPL, image=image)
+        self.do_load(Cfg.PLOT_TPL, image=image)
 
 
 def make_server_app(
@@ -168,11 +196,12 @@ def make_server_app(
         debug: bool
 ) -> Tuple[RpcProxy, Application]:
     service = RpcProxy(config)
-    get_games = r'/chart/(?P<id>[a-zA-Z0-9-]+)/?'
+    # get_games = r'/chart/(?P<id>[a-zA-Z0-9-]+)/?'
     app = Application(
         [
-            (Cfg.GET_POINT, DashRequestHandler, dict(service=service, config=config)),
-            (Cfg.GET_GAMES, DashRequestHandler, dict(service=service, config=config)),
+            (Cfg.GET_DASH, DashRequestHandler, dict(service=service, config=config)),
+            (Cfg.GET_POINT, PlotRequestHandler, dict(service=service, config=config)),
+            (Cfg.GET_GAMES, PlotRequestHandler, dict(service=service, config=config)),
             (r"/(.?)", HomeRequestHandler, dict(service=service, config=config)),
             (Cfg.STT_PATH, StaticFileHandler, {'path': Cfg.img}),
             (Cfg.CSS_PATH, StaticFileHandler, {'path': Cfg.css}),

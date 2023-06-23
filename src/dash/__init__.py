@@ -7,6 +7,7 @@ Changelog
 .. versionadded::    23.06
    |br| new plotting url at :class:`Configuration` (10)
    |br| plotting kind at :class:`Configuration` (21)
+   |br| GET_DASH & PLOT_TPL at :class:`Configuration` (23)
 
 |   **Open Source Notification:** This file is part of open source program **Alite**
 |   **Copyright © 2023  Carlo Oliveira** <carlo@nce.ufrj.br>,
@@ -62,11 +63,13 @@ class Configuration:
     dash_srv = "datascience_dash_service"
     STT_PATH = r"/image/(.*)"
     CSS_PATH = r"/css/(.*\.css)"
+    GET_DASH = r'/dash/?(.?)'
     GET_POINT = r'/chart/?(.?)'
     # GET_GAMES = r'/chart/(?P<id>[a-zA-Z0-9-]+)/?'
-    GET_GAMES = r'/chart/(?P<id>[a-zA-Z0-9-]+)/?'
+    GET_GAMES = r'/chart/(?P<pid>[a-zA-Z0-9-]+)/?'
     ERR_TPL = "erro404.html"
     DASH_TPL = "dash.html"
+    PLOT_TPL = "plot.html"
     BOIL_TPL = "boiler.html"
     AMQP_URI = "amqp://guest:guest@127.0.0.1:5672"
     config = {'AMQP_URI': AMQP_URI}
