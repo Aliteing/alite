@@ -13,7 +13,7 @@ Changelog
     |br| added person pontos (09)
     |br| added more documentation (14)
     |br| added plotting class draft (19)
-    |br| added initial templating method (21)
+    |br| added initial templating method, include value plot (21)
 
 |   **Open Source Notification:** This file is part of open source program **Alite**
 |   **Copyright © 2023  Carlo Oliveira** <carlo@nce.ufrj.br>,
@@ -31,7 +31,7 @@ from matplotlib import pyplot as plt
 from pandas import DataFrame
 import pandas as pd
 import numpy as np
-from dash import Configuration as Cfg
+from dash import Configuration as Cfg  # , Plotting as Cfplot
 import ssl
 
 ssl.SSLContext.verify_mode = ssl.VerifyMode.CERT_OPTIONAL
@@ -39,9 +39,66 @@ from nameko.rpc import rpc
 
 
 class WiscPlot:
+    """ Internal service to plot a number of charts.
+
+    """
     Cfplot = namedtuple("Cfplot", "col title ylabel xlabel")
+    """ Plotting configuration.
+
+    .. py:attribute:: col
+
+        Column of dataframe
+
+    .. py:attribute:: title
+
+        Title of the plot figure
+
+    .. py:attribute:: ylabel
+
+        Label to describe the Y axis
+
+    .. py:attribute:: xlabel
+
+        Label to describe the X axis
+
+    """
+
     Pnt = namedtuple("Pnt", "ok no td")
+    """ Point column description.
+
+    .. py:attribute:: ok
+
+        Number of current correct answers
+
+    .. py:attribute:: no
+
+        Number of current wrong answers
+
+    .. py:attribute:: td
+
+        Number of current all no matching answers
+
+    """
     Val = namedtuple("Val", "cc cf cn ct")
+    """ Value column description.
+
+    .. py:attribute:: cc
+
+        Matches current color
+
+    .. py:attribute:: cf
+
+        Matches current shape
+
+    .. py:attribute:: cn
+
+        Matches current number
+
+    .. py:attribute:: ct
+
+        Current chosen property 0-color, 1-shape, 2-number
+
+    """
 
     def __init__(self, game_url='https://games.alite.selfip.org/score/games?oid={}'):
         self.game_url = game_url
@@ -50,10 +107,19 @@ class WiscPlot:
         self.count = 0
 
     def retrieve_games(self, player):
+        """ Retrieve from remote source data for a given player
+
+        :param player: Given player id; identification
+        :return: None
+        """
         with urllib.request.urlopen(self.game_url.format(player)) as urlp:
             self.game_data.extend(json.loads(urlp.read().decode()))
 
     def process_df(self):
+        """ Shapes current dataframe to filter wisc and replace the column scorer
+
+        :return:
+        """
         dfg_ = DataFrame(self.game_data)
         dfg_ = dfg_.loc[dfg_['game'] == 'wcst']
         dfx_ = dfg_.explode('scorer')
@@ -62,18 +128,39 @@ class WiscPlot:
         return dfx_.join(dfl_)
 
     def get_all_games(self, player_oids):
+        """ Get all games from a given player.
+
+        :param player_oids: Given player id
+        :return: None (assign to current df attribute)
+        """
         _ = [self.retrieve_games(oid) for oid in player_oids]
         # print(self.game_data)
         self.df = self.process_df()
 
     def retrieve_oid_from_person_df(self, person_df):
+        """ Trim id vale from extra surroundings.
+
+        :param person_df: Given player dataframe
+        :return: self (this object)
+        """
         import re
+        # noinspection PyProtectedMember
         oid_list = [re.findall(r"'(.+?)'", text)[0] for text in person_df._id.to_list()]
         self.get_all_games(oid_list)
         return self
 
     def refine_point_value_info(self):
+        """ Extract some cognitive relevant properties from existing data,
+
+        :return: transformed dataframe with new columns
+        """
         def counter(a, b):
+            """ Counts repetition of a figure.
+
+            :param a: current figure of the series
+            :param b: next figure of the series
+            :return: count if prevails or zero if not
+            """
             a, b = int(a), int(b)
             self.count += (1 if a else 0)
             count, self.count = self.count if not b else 0, 0 if not b else self.count
@@ -112,57 +199,73 @@ class WiscPlot:
         # self.df = _df
         return _df
 
-    def plot_template(self, cfg: Cfplot, runner):
+    def plot_template(self, cfg: Cfplot, runner, df=None):
+        """ Template method to embrace a given method.
+
+        :param cfg: Plotting configuration
+        :param runner: Given method to be templated.
+        :param df: Dataframe source for plotting.
+        :return: Plotting context.
+        """
         from matplotlib import pyplot as plt_
         _ = plt_.figure(figsize=(15, 8))
-        chart_ = runner()
+        if df is None:
+            df_ = self.refine_point_value_info()
+            df_ = pd.melt(df_, id_vars="name", var_name="measure", value_name="incidence")
+        else:
+            df_ = df
+        chart_ = runner(df_)
         _ = chart_.set(title=cfg.title, ylabel=cfg.ylabel, xlabel=cfg.xlabel)
-        _ = chart_.set_xticklabels(chart_.get_xticklabels(), rotation=45, horizontalalignment='right')
+        # _ = chart_.set_xticklabels(chart_.get_xticklabels(), rotation=45, horizontalalignment='right')
         return plt_
 
     def plot(self, cfg: Cfplot):
+        """ Counting bar plot
+
+        :param cfg: Plotting configuration
+        :return: Plotting context.
+        """
         import seaborn as sbn
-        return self.plot_template(cfg, lambda: sbn.countplot(data=self.df, x="name", hue=cfg.col))
+        return self.plot_template(cfg, lambda df_: sbn.countplot(data=df_, x="name", hue=cfg.col), df=self.df)
 
     def factorplot(self, cfg: Cfplot):
-        import seaborn as sbn
-        from matplotlib import pyplot as plt_
-        plt_.figure(figsize=(15, 8))
-        df_ = self.refine_point_value_info()
-        df_ = pd.melt(df_, id_vars="name", var_name="measure", value_name="incidence")
+        """ Factor bar plot
 
-        chart_ = sbn.catplot(x='name', y='incidence', hue='measure', data=df_, kind='bar')
-        _ = chart_.set(title=cfg.title, ylabel=cfg.ylabel, xlabel=cfg.xlabel)
-        return plt_
+        :param cfg: Plotting configuration
+        :return: Plotting context.
+        """
+        import seaborn as sbn
+        return self.plot_template(cfg, lambda df_: sbn.catplot(
+            x='name', y='incidence', hue='measure', data=df_, kind='bar'))
 
     def violinplot(self, cfg: Cfplot):
+        """ Violin gaussian plot
+
+        :param cfg: Plotting configuration
+        :return: Plotting context.
+        """
         import seaborn as sbn
-        from matplotlib import pyplot as plt_
-        plt_.figure(figsize=(15, 8))
-
-        df_ = self.refine_point_value_info()
-        df_ = pd.melt(df_, id_vars="name", var_name="measure", value_name="incidence")
-
-        chart_ = sbn.violinplot(x='name', y='incidence', hue='measure', inner="quart", data=df_)
-        _ = chart_.set(title=cfg.title, ylabel=cfg.ylabel, xlabel=cfg.xlabel)
-        return plt_
+        return self.plot_template(cfg, lambda df_: sbn.violinplot(
+            x='name', y='incidence', hue='measure', inner="quart", data=df_))
 
     def histplot(self, cfg: Cfplot):
-        from matplotlib import pyplot as plt_
-        f = plt_.figure(figsize=(15, 8))
-        ax = f.add_subplot(1, 1, 1)
-        df_ = self.refine_point_value_info()
-        df_ = pd.melt(df_, id_vars="name", var_name="measure", value_name="incidence")
-        chart_ = sns.histplot(data=df_, stat="count", multiple="stack",
-                              x="incidence", kde=False,
-                              palette="pastel", hue="measure",
-                              element="bars", legend=True)
-        ax.set(xlim=(1, None), ylim=(0, 30))
+        """ Histogram bar plot
 
-        _ = chart_.set(title=cfg.title, ylabel=cfg.ylabel, xlabel=cfg.xlabel)
-        return plt_
+        :param cfg: Plotting configuration
+        :return: Plotting context.
+        """
+        import seaborn as sbn
+        return self.plot_template(cfg, lambda df_: sbn.histplot(data=df_, stat="count", multiple="stack",
+                                                                x="incidence", kde=False,
+                                                                palette="pastel", hue="measure",
+                                                                element="bars", legend=True))
 
     def heatmap(self, cfg: Cfplot):
+        """ Correlation map for cognition profiles
+
+        :param cfg: Plotting configuration
+        :return: Plotting context.
+        """
         from matplotlib import pyplot as plt_
         plt_.figure(figsize=(15, 8))
         df_ = self.refine_point_value_info()
@@ -180,20 +283,17 @@ class WiscPlot:
         return plt_
 
     def run_plotting(self, kind, data_frame):
-        plotters = dict(plot=self.plot, factor=self.factorplot,
+        """ Plotting service selector
+
+        :param kind: Selection key
+        :param data_frame: Data to be plotted.
+        :return: Plotting context
+        """
+        plotters = dict(value=self.plot, plot=self.plot, factor=self.factorplot,
                         violin=self.violinplot, hist=self.histplot, heat=self.heatmap)
-        configurations = dict(
-            plot=dict(col='ponto', title='Contagem dos Pontos Wisc', ylabel='Contagem de Pontos',
-                      xlabel="Participantes"),
-            factor=dict(col='ponto', title='Histograma das medidas do Wisc', ylabel='frequência das incidência',
-                        xlabel="incidência das medidas"),
-            violin=dict(col='ponto', title='Histograma das medidas do Wisc', ylabel='frequência das incidência',
-                        xlabel="incidência das medidas"),
-            hist=dict(col='ponto', title='Histograma das medidas do Wisc', ylabel='frequência das incidência',
-                      xlabel="incidência das medidas"),
-            heat=dict(col='ponto', title='Correlação das medidas do Wisc', ylabel='listagem das incidência',
-                      xlabel="listagem das medidas")
-        )
+        from dash import Plotting as Plot
+        configurations = dict(Plot.plotting)
+        configurations[kind].pop("sub_title") if "sub_title" in configurations[kind] else None
         self.retrieve_oid_from_person_df(data_frame)
         return plotters[kind](WiscPlot.Cfplot(**configurations[kind]))
 
@@ -248,6 +348,7 @@ class DashService:
         # retrieve_games('6477cf19f626d3cb95e08c92')
         import re
         _ = game
+        # noinspection PyProtectedMember
         matches = [re.findall(r"'(.+?)'", text)[0] for text in games._id.to_list()]
         games["oid"] = matches
         _ = [retrieve_games(oid) for oid in games.oid.to_list()]

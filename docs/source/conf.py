@@ -12,6 +12,7 @@ Changelog
 .. versionadded::    23.06
     |br| first version of config (09)
     |br| added attempt to mock decorators (14)
+    |br| supress warning for namedtuple (27)
 
 |   **Open Source Notification:** This file is part of open source program **Alite**
 |   **Copyright © 2023  Carlo Oliveira** <carlo@nce.ufrj.br>,
@@ -28,13 +29,25 @@ path = pathlib.Path(__file__).parent.parent.parent / "src"
 sys.path.insert(0, str(path))
 from dash import Configuration as Cfg
 from functools import wraps
+import collections
+
+
+def remove_namedtuple_attrib_docstring(app, what, name, obj, skip, options):
+    # noinspection PyProtectedMember
+    if type(obj) is collections._tuplegetter:
+        return True
+    return skip
+
+
+def setup(app):
+    app.connect('autodoc-skip-member', remove_namedtuple_attrib_docstring)
 
 
 def mock_decorator(*args, **kwargs):
     def decorator(f):
         @wraps(f)
-        def decorated_function(*args, **kwargs):
-            return f(*args, **kwargs)
+        def decorated_function(*args_, **kwargs_):
+            return f(*args_, **kwargs_)
         return decorated_function
     return decorator
 
@@ -67,7 +80,8 @@ release = Cfg.version
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx_rtd_theme']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx_rtd_theme',
+              'sphinx_toolbox.more_autodoc.autonamedtuple']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

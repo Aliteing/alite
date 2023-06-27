@@ -8,6 +8,7 @@ Changelog
    |br| new plotting url at :class:`Configuration` (10)
    |br| plotting kind at :class:`Configuration` (21)
    |br| GET_DASH & PLOT_TPL at :class:`Configuration` (23)
+   |br| new plotting configuration :class:`Plotting` (27)
 
 |   **Open Source Notification:** This file is part of open source program **Alite**
 |   **Copyright © 2023  Carlo Oliveira** <carlo@nce.ufrj.br>,
@@ -43,6 +44,25 @@ class MongoConfiguration:
     atlas_url = ev["atlas"]
     username = "carlotolla9"
     con_string = f"mongodb+srv://{username}:{passwd}@{db_url}/?retryWrites=true&w=majority"
+
+
+@dataclass
+class Plotting:
+    kind = "value plot factor violin hist heat".split()
+    icon = [(6, 5), (6, 5), (3, 2), (6, 0), (2, 2), (5, 4)]
+    value = dict(col='valor', title='Contagem dos Valores Wisc', ylabel='Contagem de Valores',
+                 xlabel="Participantes", sub_title="Counting Plot de valores do teste Wisconsin")
+    plot = dict(col='ponto', title='Contagem dos Pontos Wisc', ylabel='Contagem de Pontos',
+                xlabel="Participantes", sub_title="Counting Plot de pontos do teste Wisconsin")
+    factor = dict(col='ponto', title='Factor Plot das medidas do Wisc', ylabel='frequência das incidência',
+                  xlabel="incidência das medidas", sub_title="Factor Plot do teste Wisconsin")
+    violin = dict(col='ponto', title='Violin Plot das medidas do Wisc', ylabel='frequência das incidência',
+                  xlabel="incidência das medidas", sub_title="Violin Plot do teste Wisconsin")
+    hist = dict(col='ponto', title='Histograma das medidas do Wisc', ylabel='frequência das incidência',
+                xlabel="incidência das medidas", sub_title="Histogram Plot do teste Wisconsin")
+    heat = dict(col='ponto', title='Correlação das medidas do Wisc', ylabel='listagem das incidência',
+                xlabel="listagem das medidas", sub_title="Heatmap Plot dos fatores no teste Wisconsin")
+    plotting = dict(value=value, plot=plot, factor=factor, violin=violin, hist=hist, heat=heat)
 
 
 @dataclass

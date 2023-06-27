@@ -23,6 +23,7 @@ Changelog
     |br| :meth:`BaseRequestHandler.check_modal`, boiler and about (10)
     |br| :meth:`BaseRequestHandler.check_modal`, boiler and about (10)
     |br| :class:`PlotRequestHandler`, plot & dash, menu boiler review (23)
+    |br| :class:`dash.Plotting`, to parameterize kind and icon, add subtitle   (27)
 
 
 |   **Open Source Notification:** This file is part of open source program **Alite**
@@ -41,6 +42,7 @@ from tornado.web import Application, RequestHandler, StaticFileHandler
 from nameko.rpc import RpcProxy
 from typing import Any, Tuple, AnyStr
 from dash import Configuration as Cfg
+from dash import Plotting as Plot
 
 # tornado.template.execute(about=lambda *_: "")
 version__ = Cfg.version
@@ -150,9 +152,11 @@ class DashRequestHandler(BaseRequestHandler):
         """
         self.check_modal(op)
         _ = mid
-        kind = "plot factor violin hist heat".split()
-        icon = [(6, 5), (3, 2), (6, 0), (2, 2), (5, 4)]
-        kind = list(zip(kind, kind, kind, icon))
+        kind = Plot.kind
+        icon = Plot.icon
+        titles = [Plot.plotting[knd]["title"] for knd in kind]
+        sub_titles = [Plot.plotting[knd]["sub_title"] for knd in kind]
+        kind = list(zip(kind, titles, sub_titles, icon))
         chart_menu = [
             [(a_chart, iy * -400 - 64, ix * -396, a_name, a_leg) for a_chart, a_name, a_leg, (ix, iy)
              in line_menu]
@@ -180,7 +184,7 @@ class PlotRequestHandler(BaseRequestHandler):
         def plot_chart(cluster):
             return cluster.datascience_dash_service.plot_chart(pid)
         self.check_modal(op)
-        kind = "plot factor violin hist heat".split()
+        kind = Plot.kind
         from nameko.standalone.rpc import ClusterRpcProxy
         # from dash.service import DashService
         # from nameko.testing.services import worker_factory
@@ -195,6 +199,12 @@ def make_server_app(
         config: AnyStr,
         debug: bool
 ) -> Tuple[RpcProxy, Application]:
+    """ Configura as rotas e parâmetros iniciais do servidor.
+
+    :param config:  Configurações dos módulos
+    :param debug: Determina se entre no modo depuração.
+    :return: Uma dupla com o serviço remoto e o aplicativo tornado.
+    """
     service = RpcProxy(config)
     # get_games = r'/chart/(?P<id>[a-zA-Z0-9-]+)/?'
     app = Application(
@@ -219,6 +229,12 @@ define('port', default=Cfg.port, help='port to listen on')
 
 
 def run_server(app: tornado.web.Application, port: int):
+    """ Executa o laço assíncrono do servidor.
+
+    :param app: Aplicativo configurado do tornado.
+    :param port: A porta que irá conectar com o servidor.
+    :return: None
+    """
     _port = int(options.port or port)
     http_server = HTTPServer(app)
     http_server.listen(_port)
@@ -227,6 +243,11 @@ def run_server(app: tornado.web.Application, port: int):
 
 
 def main(args=Cfg):
+    """ Função principal que chama o run_server e make_server_app
+
+    :param args: Configurações dos módulos
+    :return: None (apenas inicia o servidor)
+    """
     addr_service, dash_app = make_server_app(config=args.dash_srv, debug=args.debug)
     run_server(app=dash_app, port=args.port,)
 

@@ -16,6 +16,7 @@ Bem Vindo à documentação do Alite-Dash!
    modules.rst
    servidor.rst
    servindo.rst
+   principal.rst
 
 Tabelas e Índices
 ==================
