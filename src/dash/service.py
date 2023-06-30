@@ -14,6 +14,7 @@ Changelog
     |br| added more documentation (14)
     |br| added plotting class draft (19)
     |br| added initial templating method, include value plot (21)
+    |br| fix Pnt & joiner; added x-lim & y-lim to plots (30)
 
 |   **Open Source Notification:** This file is part of open source program **Alite**
 |   **Copyright © 2023  Carlo Oliveira** <carlo@nce.ufrj.br>,
@@ -31,10 +32,7 @@ from matplotlib import pyplot as plt
 from pandas import DataFrame
 import pandas as pd
 import numpy as np
-from dash import Configuration as Cfg  # , Plotting as Cfplot
-import ssl
-
-ssl.SSLContext.verify_mode = ssl.VerifyMode.CERT_OPTIONAL
+from dash import Configuration as Cfg
 from nameko.rpc import rpc
 
 
@@ -154,6 +152,7 @@ class WiscPlot:
 
         :return: transformed dataframe with new columns
         """
+
         def counter(a, b):
             """ Counts repetition of a figure.
 
@@ -171,15 +170,18 @@ class WiscPlot:
             return int(int(t != w) * 2 ** w * k)
 
         def bother(c, f, n, t):
-            c, f, n, t = int(c), int(f), int(n), int(t)
+            c, f, n, t = int(c), int(f), int(n), int(t) % 3
             all_k = [c, f, n]
+            if t > 2 or t < 0:
+                raise ValueError(t)
             target = all_k.pop(t)
             return target * sum(all_k)
 
-        point_list = [self.Pnt(*list(text)) for text in self.df.ponto.to_list()]
+        point_list = [self.Pnt(text[:-2], *list(text[-2:])) for text in self.df.ponto.to_list()]
         new_list = point_list[1:] + [self.Pnt(0, 0, 0)]
         val_list0 = [self.Val(*list(text)) for text in self.df.valor.to_list()]
-        val_list = [joiner(val.cc, val.ct, 0) + joiner(val.cf, val.ct, 1) + joiner(val.cn, val.ct, 2) for val in
+        val_list = [joiner(val.cc, val.ct, 0) + joiner(val.cf, val.ct, 1) + joiner(val.cn, val.ct, 2)
+                    for val in
                     val_list0]
         val_list1 = val_list[1:] + [0]
         conservation = [counter(a.ok, b.ok) for a, b in zip(point_list, new_list)]
@@ -199,24 +201,31 @@ class WiscPlot:
         # self.df = _df
         return _df
 
-    def plot_template(self, cfg: Cfplot, runner, df=None):
+    def plot_template(self, cfg: Cfplot, runner, x_lim=None, y_lim=None, df=None):
         """ Template method to embrace a given method.
 
         :param cfg: Plotting configuration
         :param runner: Given method to be templated.
         :param df: Dataframe source for plotting.
+        :param x_lim: Limits for x-axis.
+        :param y_lim: Limits for y-axis.
         :return: Plotting context.
         """
         from matplotlib import pyplot as plt_
-        _ = plt_.figure(figsize=(15, 8))
+        f = plt_.figure(figsize=(15, 8))
+        ax = f.add_subplot(1, 1, 1)
+
         if df is None:
             df_ = self.refine_point_value_info()
             df_ = pd.melt(df_, id_vars="name", var_name="measure", value_name="incidence")
         else:
             df_ = df
-        chart_ = runner(df_)
+        chart_ = runner(df_, ax)
         _ = chart_.set(title=cfg.title, ylabel=cfg.ylabel, xlabel=cfg.xlabel)
         # _ = chart_.set_xticklabels(chart_.get_xticklabels(), rotation=45, horizontalalignment='right')
+        chart_.set(xlim=x_lim) if x_lim else None
+        chart_.set(ylim=y_lim) if y_lim else None
+        # chart_.set_xlim(left=x_lim[0], right=x_lim[1]) if x_lim else None
         return plt_
 
     def plot(self, cfg: Cfplot):
@@ -226,7 +235,7 @@ class WiscPlot:
         :return: Plotting context.
         """
         import seaborn as sbn
-        return self.plot_template(cfg, lambda df_: sbn.countplot(data=df_, x="name", hue=cfg.col), df=self.df)
+        return self.plot_template(cfg, lambda df_, a: sbn.countplot(data=df_, x="name", hue=cfg.col), df=self.df)
 
     def factorplot(self, cfg: Cfplot):
         """ Factor bar plot
@@ -235,7 +244,7 @@ class WiscPlot:
         :return: Plotting context.
         """
         import seaborn as sbn
-        return self.plot_template(cfg, lambda df_: sbn.catplot(
+        return self.plot_template(cfg, lambda df_, a: sbn.catplot(
             x='name', y='incidence', hue='measure', data=df_, kind='bar'))
 
     def violinplot(self, cfg: Cfplot):
@@ -245,8 +254,8 @@ class WiscPlot:
         :return: Plotting context.
         """
         import seaborn as sbn
-        return self.plot_template(cfg, lambda df_: sbn.violinplot(
-            x='name', y='incidence', hue='measure', inner="quart", data=df_))
+        return self.plot_template(cfg, lambda df_, a: sbn.violinplot(
+            x='name', y='incidence', hue='measure', inner="quart", data=df_), y_lim=(None, 10))
 
     def histplot(self, cfg: Cfplot):
         """ Histogram bar plot
@@ -255,10 +264,12 @@ class WiscPlot:
         :return: Plotting context.
         """
         import seaborn as sbn
-        return self.plot_template(cfg, lambda df_: sbn.histplot(data=df_, stat="count", multiple="stack",
-                                                                x="incidence", kde=False,
-                                                                palette="pastel", hue="measure",
-                                                                element="bars", legend=True))
+        return self.plot_template(cfg, lambda df_, a: sbn.histplot(
+            data=df_, stat="count", multiple="stack",
+            x="incidence", kde=False,
+            palette="pastel", hue="measure",
+            element="bars", legend=True, ax=a),
+                                  x_lim=(9, None), y_lim=(0, 50))
 
     def heatmap(self, cfg: Cfplot):
         """ Correlation map for cognition profiles
