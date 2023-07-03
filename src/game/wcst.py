@@ -1,44 +1,35 @@
 #! /usr/bin/env python
 # -*- coding: UTF8 -*-
-# Este arquivo é parte do programa Alite
-# Copyright(c)2013 - 2014, Pedro Rodriguez <pedro.rodriguez.web @ gmail.com>
-# All rights reserved.
-# Copyright 2010–2022 Carlo Oliveira <carlo@nce.ufrj.br>,
-# `Labase <http://labase.activufrj.nce.ufrj.br>`__; `GPL <http://j.mp/GNU_GPL3>`__.
-#
-# Alite é um software livre; você pode redistribuí-lo e/ou
-# modificá-lo dentro dos termos da Licença Pública Geral GNU como
-# publicada pela Fundação do Software Livre (FSF); na versão 3 da
-# Licença.
-#
-# Este programa é distribuído na esperança de que possa ser útil,
-# mas SEM NENHUMA GARANTIA; sem uma garantia implícita de ADEQUAÇÃO
-# a qualquer MERCADO ou APLICAÇÃO EM PARTICULAR. Veja a
-# Licença Pública Geral GNU para maiores detalhes.
-#
-# Você deve ter recebido uma cópia da Licença Pública Geral GNU
-# junto com este programa, se não, veja em <http://www.gnu.org/licenses/>
-""" Main eica client control.
+"""  Main eica client control.
 Programa baseado no Teste Wisconsin
 Autor: Neno Henrique Albernaz
 Criado em Junho de 2008
 
+Changelog
+---------
+
+.. versionadded::    23.07
+   |br| fixed r/w announce (16).
+
+.. versionadded::    23.05
+   |br| add click from bazaar, need fix (16).
+   |br| win condition fixed, but allows crash (17).
+   |br| refactor WebCard out, new response card generation (18).
+   |br| add session and scoring conforming to API (19).
+   |br| condense ponto & valor into strings (25).
+   |br| add initial time for latency (31)
+
+.. versionadded::    23.04
+   |br| Port to client interaction(05).
+
+|   **Open Source Notification:** This file is part of open source program **Alite**
+|   **Copyright © 2023  Carlo Oliveira** <carlo@nce.ufrj.br>,
+|   **SPDX-License-Identifier:** `GNU General Public License v3.0 or later <http://is.gd/3Udt>`_.
+|   `Labase <http://labase.selfip.org/>`_ - `NCE <http://portal.nce.ufrj.br>`_ - `UFRJ <https://ufrj.br/>`_.
+
 .. codeauthor:: Carlo Oliveira <carlo@nce.ufrj.br>
 .. codeauthor:: Neno Henrique Albernaz<neno@nce.ufrj.br>
 .. codeauthor:: Julia <carlo@nce.ufrj.br>
-
-Changelog
----------
-.. versionadded::    23.05
-        add click from bazaar, need fix (16).
-        win condition fixed, but allows crash (17).
-        refactor WebCard out, new response card generation (18).
-        add session and scoring conforming to API (19).
-        condense ponto & valor into strings (25).
-        add initial time for latency (31)
-
-.. versionadded::    23.04
-        Port to client interaction(05).
 
 """
 from datetime import datetime
@@ -204,7 +195,7 @@ class Wisconsin:
 
         if carta_resposta.testa_mesma_categoria(carta_estimulo, self.lista_categorias[self.categoria]):
             self.acertos_consecutivos += 1
-            resultado_teste = f"Certo {self.acertos_consecutivos}"
+            resultado_teste = "Certo"  # {self.acertos_consecutivos}"
         else:
             self.acertos_consecutivos = 0
             resultado_teste = f"Errado"

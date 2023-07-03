@@ -2,7 +2,7 @@
 # Added Labels, change -m to main, expose 8084
 FROM python:3.12.0a5-alpine3.17
 LABEL labase.author="carlo@ufrj.br"
-LABEL version="23.05"
+LABEL version="23.07"
 LABEL description="Alite education platform configured for games"
 # Install python and pip
 # RUN apk add --no-cache --update python3 py-pip bash
