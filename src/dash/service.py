@@ -204,7 +204,7 @@ class WiscPlot:
         # self.df = _df
         return _df
 
-    def plot_template(self, cfg: Cfplot, runner, x_lim=None, y_lim=None, df=None):
+    def plot_template(self, cfg: Cfplot, runner, x_lim=None, y_lim=None, tick=False, df=None):
         """ Template method to embrace a given method.
 
         :param cfg: Plotting configuration
@@ -226,6 +226,7 @@ class WiscPlot:
         chart_ = runner(df_, ax)
         _ = chart_.set(title=cfg.title, ylabel=cfg.ylabel, xlabel=cfg.xlabel)
         # _ = chart_.set_xticklabels(chart_.get_xticklabels(), rotation=45, horizontalalignment='right')
+        _ = chart_.set_xticklabels(rotation=45, horizontalalignment='right') if tick else None
         chart_.set(xlim=x_lim) if x_lim else None
         chart_.set(ylim=y_lim) if y_lim else None
         # chart_.set_xlim(left=x_lim[0], right=x_lim[1]) if x_lim else None
@@ -248,7 +249,7 @@ class WiscPlot:
         """
         import seaborn as sbn
         return self.plot_template(cfg, lambda df_, a: sbn.catplot(
-            x='name', y='incidence', hue='measure', data=df_, kind='bar'))
+            x='name', y='incidence', hue='measure', data=df_, kind='bar'), tick=True)
 
     def violinplot(self, cfg: Cfplot):
         """ Violin gaussian plot
@@ -258,7 +259,7 @@ class WiscPlot:
         """
         import seaborn as sbn
         return self.plot_template(cfg, lambda df_, a: sbn.violinplot(
-            x='name', y='incidence', hue='measure', inner="quart", data=df_), y_lim=(None, 10))
+            x='name', y='incidence', hue='measure', inner="quart", data=df_), y_lim=(-1, 2))
 
     def histplot(self, cfg: Cfplot):
         """ Histogram bar plot
@@ -272,7 +273,7 @@ class WiscPlot:
             x="incidence", kde=False,
             palette="pastel", hue="measure",
             element="bars", legend=True, ax=a),
-                                  x_lim=(9, None), y_lim=(0, 50))
+                                  x_lim=(9, None), y_lim=(0, 8))
 
     def heatmap(self, cfg: Cfplot):
         """ Correlation map for cognition profiles
