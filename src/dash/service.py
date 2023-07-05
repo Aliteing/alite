@@ -10,6 +10,7 @@ Changelog
 ---------
 .. versionadded::    23.07
     |br| added player time chart (04)
+    |br| fix plot_pontos to do time and score report (05)
 
 .. versionadded::    23.06
     |br| first version of main (09)
@@ -207,6 +208,7 @@ class WiscPlot:
     def plot_template(self, cfg: Cfplot, runner, x_lim=None, y_lim=None, tick=False, df=None):
         """ Template method to embrace a given method.
 
+        :param tick: Add slant labels to x-axis.
         :param cfg: Plotting configuration
         :param runner: Given method to be templated.
         :param df: Dataframe source for plotting.
@@ -319,10 +321,13 @@ class DashService:
     """
     name = Cfg.dash_srv
 
-    def __init__(self):
+    def __init__(self, game_url='https://games.alite.selfip.org/score/games?oid={}'):
         self.person_url = Cfg.person_url
         self.df: DataFrame = DataFrame()
         self.wisc_plot = WiscPlot()
+        self.game_url = game_url
+        self.game_data = []
+        self.count = 0
 
     @staticmethod
     def person_load(person=Cfg.person_url):
@@ -336,43 +341,63 @@ class DashService:
         with urllib.request.urlopen(person) as url:
             return json.loads(url.read().decode())
 
-    def general_stats(self):
+    def general_stats(self, person='https://games.alite.selfip.org/score/players'):
+        """ Carrega as informações de dados a partir de um servidor num arcabouço.
+
+        :param person: Url que endereça os dados necessários
+        :return: None
+        """
+        import urllib.request
+        import json
         from datetime import datetime
+        import re
         then = datetime(2023, 6, 29)
 
-        def dt(g):
-            k, m = g["scorer"][0]["time"], g["scorer"][-1]["time"]
-            k, m = pd.to_datetime(k).tz_localize(None), pd.to_datetime(m).tz_localize(None)
-            return pd.Timedelta(m - k, unit="min").seconds // 60
+        def new(g):
+            play_date = pd.to_datetime(g["time"]).tz_localize(None)
+            return play_date > then
 
-        def gm(oid):
-            furl = f'https://games.alite.selfip.org/score/games?oid={oid}'
-            with urllib.request.urlopen(furl) as url:
-                data = json.loads(url.read().decode())
-                game = max((dt(g) for g in data if g["scorer"] and g["game"] == "game"), default=0)
-                wsct = max((dt(g) for g in data if g["scorer"] and g["game"] == "wsct"), default=0)
-                return f"{game} {wsct}"
+        def get_oid(oid):
+            return re.findall(r"'(.+?)'", oid)[0]
 
-        df = pd.DataFrame(self.person_load(person='https://games.alite.selfip.org/score/players'))
-        df['games_l'] = [[g["game"] for g in t] for t in df.games]
-        df['eica'] = [sum([1 for g in t if "game" in g]) for t in df.games_l.tolist()]
-        df['wcst'] = [sum([1 for g in t if "wcst" in g]) for t in df.games_l.tolist()]
-        df["esc"] = df["ano"].apply(lambda x: int(str(x)[3:]))
-        df["ida"] = df["idade"].apply(lambda x: int(str(x)[4:]) + 5)
-        df["old"] = df["time"].apply(lambda x: pd.to_datetime(x).tz_localize(None))
-        df_rec = df.drop(df[(df.old < then) | (df["esc"] < 6) | (df["esc"] > 9)].index, inplace=False)
-        df_rec = df_rec.groupby(['name', 'esc', "ida", "eica", "wcst", "_id"], as_index=False).agg(
-            {"_id": "first"}).reset_index()  # .reset_index()
-        import re
-        # noinspection PyProtectedMember
-        matches = [re.findall(r"'(.+?)'", text)[0] for text in df_rec._id.to_list()]
-        df_rec["oid"] = matches
-        dfo = df_rec.drop('_id', axis=1)
-        dfo["ws_ga"] = dfo["oid"].apply(lambda x: gm(x))
-        dfo[['gt', 'wt']] = dfo['ws_ga'].str.split(' ', expand=True)
-        dfo['wtmx'] = dfo['wt'].apply(lambda x: int(x))
-        dfo['gtmx'] = dfo['gt'].apply(lambda x: int(x))
-        return dfo
+        def retrieve_games(player):
+            """ Retrieve from remote source data for a given player
+
+            :param player: Given player id; identification
+            :return: None
+            """
+            with urllib.request.urlopen(self.game_url.format(player)) as urlp:
+                self.game_data.extend(json.loads(urlp.read().decode()))
+
+        def process_df():
+            """ Shapes current dataframe to filter wisc and replace the column scorer
+
+            :return:
+            """
+
+            def dt(g):
+                k, m = g[0]["time"], g[-1]["time"]
+                k, m = pd.to_datetime(k).tz_localize(None), pd.to_datetime(m).tz_localize(None)
+                return pd.Timedelta(m - k, unit="min").seconds
+
+            dfg_ = DataFrame(gd for gd in self.game_data if gd["scorer"])
+            dfg_ = dfg_.loc[(dfg_['game'] == 'wcst') | (dfg_['game'] == 'game')]
+            dfg_["jogadas"] = dfg_.scorer.apply(lambda x: len(x))
+            dfg_["periodo"] = dfg_.scorer.apply(lambda x: dt(x))
+            dfg_["game"] = dfg_.game.apply(lambda x: 'eica' if x == "game" else x)
+            dfg_["name"] = dfg_.name.apply(lambda x: f"{n[0]} {n[1][:2]}." if len(n := x.split()) > 1 else x)
+            dfx_ = dfg_.drop(columns=["scorer", "_id"], inplace=False).reset_index()
+            dfo = dfx_.groupby(
+                ['name', 'game'], as_index=False
+            ).agg({'jogadas': 'max', 'periodo': 'max'}).reset_index()
+            return dfo
+
+        with urllib.request.urlopen(person) as url:
+            data = json.loads(url.read().decode())
+            oids = [get_oid(gui["_id"]) for gui in data if new(gui)]
+            _ = [retrieve_games(oid) for oid in oids]
+        self.df = process_df()
+        return self.df
 
     def games_load(self, games, game='wcst'):
         """ Retrieve games from source
@@ -437,13 +462,20 @@ class DashService:
 
         :return: O gráfico plotado em forma se sequência codificada em base64
         """
-        # import seaborn as sns
-        # from matplotlib import pyplot as plt
         dfx = self.general_stats()
         _ = plt.figure(figsize=(15, 8))
-        chart = sns.barplot(data=dfx, x="name", y="gtmx", hue="ida")
-        _ = chart.set(title='Contagem dos Tempos de Jogo', ylabel='Tempo de Duração de Jogo', xlabel="Participantes")
+        fig, (ax1, ax2) = plt.subplots(2)
+        fig.set_figheight(12)
+        fig.set_figwidth(15)
+        plt.subplots_adjust(hspace=0.4)
+
+        chart = sns.barplot(data=dfx, x="name", y="periodo", hue="game", ax=ax1, palette="mako")
+        _ = chart.set(title='Duração dos Jogos', ylabel='Tempo dos Jogos', xlabel="Participantes", ylim=(0, 3000))
         _ = chart.set_xticklabels(chart.get_xticklabels(), rotation=45, horizontalalignment='right')
+
+        chart1 = sns.barplot(data=dfx, x="name", y="jogadas", hue="game", ax=ax2, palette="rocket")
+        _ = chart1.set(title='Contagem das Jogadas', ylabel='Número de Jogos', xlabel="Participantes", ylim=(0, 800))
+        _ = chart1.set_xticklabels(chart.get_xticklabels(), rotation=45, horizontalalignment='right')
         return self.to_base64()
 
     def _plot_pontos(self):
@@ -451,12 +483,12 @@ class DashService:
 
         :return: O gráfico plotado em forma se sequência codificada em base64
         """
-        self.df = DataFrame(self.person_load())
-        self.df['games_l'] = [[g["game"] for g in t] for t in self.df.games]
-        dfx = self.df.explode('games_l')
+        # import seaborn as sns
+        # from matplotlib import pyplot as plt
+        dfx = self.general_stats()
         _ = plt.figure(figsize=(15, 8))
-        chart = sns.countplot(data=dfx, x="name", hue="games_l")
-        _ = chart.set(title='Contagem dos Jogos', ylabel='Número de Jogos', xlabel="Participantes")
+        chart = sns.barplot(data=dfx, x="name", y="gtmx", hue="ida")
+        _ = chart.set(title='Contagem dos Tempos de Jogo', ylabel='Tempo de Duração de Jogo', xlabel="Participantes")
         _ = chart.set_xticklabels(chart.get_xticklabels(), rotation=45, horizontalalignment='right')
         return self.to_base64()
 
