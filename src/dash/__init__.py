@@ -32,7 +32,7 @@ class MongoConfiguration:
         with open(_path, "r") as dot_env:
             _env = dot_env.read().split("\n")
             import re
-            _env = [re.findall(r'(.+?)="(.+?)"', line)[0] for line in _env if line]
+            _env = [re.findall(r'(.+?)="(.+?)"', line)[0] for line in _env if line and '"' in line]
             _env = {k: v for k, v in _env}
             return _env
 

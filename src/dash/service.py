@@ -11,6 +11,7 @@ Changelog
 .. versionadded::    23.07
     |br| added player time chart (04)
     |br| fix plot_pontos to do time and score report (05)
+    |br| fix dimension and names on WiscPlot (06)
 
 .. versionadded::    23.06
     |br| first version of main (09)
@@ -35,7 +36,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 from pandas import DataFrame
 import pandas as pd
-import numpy as np
+# import numpy as np
 from dash import Configuration as Cfg
 from nameko.rpc import rpc
 
@@ -124,6 +125,8 @@ class WiscPlot:
         """
         dfg_ = DataFrame(self.game_data)
         dfg_ = dfg_.loc[dfg_['game'] == 'wcst']
+        dfg_["name"] = dfg_.name.apply(lambda x: f"{n[0]} {n[1][:2]}." if len(n := x.split()) > 1 else x)
+
         dfx_ = dfg_.explode('scorer')
         dfl_ = DataFrame(dfx_.scorer.values.tolist())
         dfx_ = dfx_.drop(columns=["scorer"], inplace=False).reset_index()
@@ -205,7 +208,7 @@ class WiscPlot:
         # self.df = _df
         return _df
 
-    def plot_template(self, cfg: Cfplot, runner, x_lim=None, y_lim=None, tick=False, df=None):
+    def plot_template(self, cfg: Cfplot, runner, x_lim=None, y_lim=None, tick=False, tl= False, df=None):
         """ Template method to embrace a given method.
 
         :param tick: Add slant labels to x-axis.
@@ -217,7 +220,7 @@ class WiscPlot:
         :return: Plotting context.
         """
         from matplotlib import pyplot as plt_
-        f = plt_.figure(figsize=(15, 8))
+        f = plt_.figure(figsize=(20, 8))
         ax = f.add_subplot(1, 1, 1)
 
         if df is None:
@@ -228,6 +231,7 @@ class WiscPlot:
         chart_ = runner(df_, ax)
         _ = chart_.set(title=cfg.title, ylabel=cfg.ylabel, xlabel=cfg.xlabel)
         # _ = chart_.set_xticklabels(chart_.get_xticklabels(), rotation=45, horizontalalignment='right')
+        chart_.set_xticklabels(chart_.get_xticklabels(), rotation=45, horizontalalignment='right') if tl else None
         _ = chart_.set_xticklabels(rotation=45, horizontalalignment='right') if tick else None
         chart_.set(xlim=x_lim) if x_lim else None
         chart_.set(ylim=y_lim) if y_lim else None
@@ -241,7 +245,8 @@ class WiscPlot:
         :return: Plotting context.
         """
         import seaborn as sbn
-        return self.plot_template(cfg, lambda df_, a: sbn.countplot(data=df_, x="name", hue=cfg.col), df=self.df)
+        return self.plot_template(cfg, lambda df_, a: sbn.countplot(data=df_, x="name", hue=cfg.col), df=self.df,
+                                  tl=True)
 
     def factorplot(self, cfg: Cfplot):
         """ Factor bar plot
@@ -251,7 +256,8 @@ class WiscPlot:
         """
         import seaborn as sbn
         return self.plot_template(cfg, lambda df_, a: sbn.catplot(
-            x='name', y='incidence', hue='measure', data=df_, kind='bar'), tick=True)
+            x='name', y='incidence', hue='measure', data=df_, kind='bar', height=8, aspect=2.5),
+                                  tick=True, y_lim=(0, 1))
 
     def violinplot(self, cfg: Cfplot):
         """ Violin gaussian plot
@@ -261,7 +267,7 @@ class WiscPlot:
         """
         import seaborn as sbn
         return self.plot_template(cfg, lambda df_, a: sbn.violinplot(
-            x='name', y='incidence', hue='measure', inner="quart", data=df_), y_lim=(-1, 2))
+            x='name', y='incidence', hue='measure', inner="quart", data=df_), y_lim=(-1, 2), tl=True)
 
     def histplot(self, cfg: Cfplot):
         """ Histogram bar plot
@@ -284,6 +290,7 @@ class WiscPlot:
         :return: Plotting context.
         """
         from matplotlib import pyplot as plt_
+        import numpy as np
         plt_.figure(figsize=(15, 8))
         df_ = self.refine_point_value_info()
         df_ = df_.drop(columns=['name'], inplace=False)
@@ -294,6 +301,7 @@ class WiscPlot:
         # Generate a custom diverging colormap
         cmap = sns.diverging_palette(230, 20, as_cmap=True)
         # Draw the heatmap with the mask and correct aspect ratio
+        # chart_ = sns.heatmap(corr, cmap=cmap, vmax=.3, center=0,
         chart_ = sns.heatmap(corr, mask=mask, cmap=cmap, vmax=.3, center=0,
                              square=True, linewidths=.5, cbar_kws={"shrink": .5})
         _ = chart_.set(title=cfg.title, ylabel=cfg.ylabel, xlabel=cfg.xlabel)
