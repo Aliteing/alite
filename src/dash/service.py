@@ -12,6 +12,7 @@ Changelog
     |br| added player time chart (04)
     |br| fix plot_pontos to do time and score report (05)
     |br| fix dimension and names on WiscPlot (06)
+    |br| Review opposition, deviation and transamb (06)
 
 .. versionadded::    23.06
     |br| first version of main (09)
@@ -172,36 +173,51 @@ class WiscPlot:
             count, self.count = self.count if not b else 0, 0 if not b else self.count
             return count
 
+        def alter(a, b):
+            a, b = int(a), int(b)
+            no_alter = (a == b) or (b==0) or (a==0)
+            self.count += (1 if a!=b else 0)
+            count, self.count = self.count if no_alter else 0, 0 if no_alter else self.count
+            return count
+
         def joiner(k, t, w):
             k, t = int(k), int(t)
             return int(int(t != w) * 2 ** w * k)
 
-        def bother(c, f, n, t):
+        def no_bother(cc, cf, cn, ct):
+            non =  [int(cc), int(cf), int(cn)]
+            do = non.pop(int(ct)%3) < 1
+            return int(all(non)) if do else 0
+
+        def none(cc, cf, cn, ct):
+            non =  [int(cc), int(cf), int(cn)]
+            do = non.pop(int(ct)%3) < 1
+            return (non[0] + 2* non[1]) if do else 0
+
+        def bother(c, f, n, t, e=True):
             c, f, n, t = int(c), int(f), int(n), int(t) % 3
             all_k = [c, f, n]
             if t > 2 or t < 0:
                 raise ValueError(t)
             target = all_k.pop(t)
-            return target * sum(all_k)
+            return target * sum(all_k) if e else int(all(all_k))
 
         point_list = [self.Pnt(text[:-2], *list(text[-2:])) for text in self.df.ponto.to_list()]
         new_list = point_list[1:] + [self.Pnt(0, 0, 0)]
         val_list0 = [self.Val(*list(text)) for text in self.df.valor.to_list()]
+        non_list = [none(*list(val)) for val in self.df.valor.to_list()]
+        nob_list = [no_bother(*list(val)) for val in self.df.valor.to_list()]
         val_list = [joiner(val.cc, val.ct, 0) + joiner(val.cf, val.ct, 1) + joiner(val.cn, val.ct, 2)
                     for val in
                     val_list0]
-        val_list1 = val_list[1:] + [0]
         conservation = [counter(a.ok, b.ok) for a, b in zip(point_list, new_list)]
         perseveration = [counter(a.no, b.no) for a, b in zip(point_list, new_list)]
-        oposition = [counter(a.td, b.td) for a, b in zip(point_list, new_list)]
-        deviation = [counter(a, b) for a, b in zip(val_list, val_list1)]
+        deviation = [alter(a, b) for a, b in zip(non_list, non_list[1:] + [0])]
+        oposition = [counter(a, b) for a, b in zip(nob_list, nob_list[1:] + [0])]
         ambiguation = [bother(c, f, n, t) for c, f, n, t in val_list0]
-        # print("refine_point_info", conserve)
-        # print("refine_point_infoc", conservation)
-        # print("refine_val_infof", ambiguation)
-        # # print("refine_point_infon", alterationn)
-        zipped = list(zip(conservation, perseveration, oposition, deviation, ambiguation))
-        df__ = DataFrame(zipped, columns='conservation perseveration oposition deviation ambiguation'.split())
+        transamb = [bother(c, f, n, t, False) for c, f, n, t in val_list0]
+        zipped = list(zip(conservation, perseveration, oposition, deviation, ambiguation, transamb))
+        df__ = DataFrame(zipped, columns='conservation perseveration oposition deviation ambiguation, transamb'.split())
         _df = self.df.drop(columns='game goal trial carta casa move time ponto valor'.split(),
                            inplace=False).reset_index()
         _df = _df.join(df__).drop(columns='level_0 index _id'.split(), inplace=False)
