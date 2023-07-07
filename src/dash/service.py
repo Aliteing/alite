@@ -13,6 +13,7 @@ Changelog
     |br| fix plot_pontos to do time and score report (05)
     |br| fix dimension and names on WiscPlot (06)
     |br| Review opposition, deviation and transamb (06)
+    |br| Added negation, fixed minor warnings (7).
 
 .. versionadded::    23.06
     |br| first version of main (09)
@@ -129,7 +130,9 @@ class WiscPlot:
         dfg_["name"] = dfg_.name.apply(lambda x: f"{n[0]} {n[1][:2]}." if len(n := x.split()) > 1 else x)
 
         dfx_ = dfg_.explode('scorer')
-        dfl_ = DataFrame(dfx_.scorer.values.tolist())
+        valor_list = [text if type(text) == dict else {} for text in dfx_.scorer.values.tolist()]
+
+        dfl_ = DataFrame(valor_list)
         dfx_ = dfx_.drop(columns=["scorer"], inplace=False).reset_index()
         return dfx_.join(dfl_)
 
@@ -175,59 +178,58 @@ class WiscPlot:
 
         def alter(a, b):
             a, b = int(a), int(b)
-            no_alter = (a == b) or (b==0) or (a==0)
-            self.count += (1 if a!=b else 0)
+            no_alter = (a == b) or (b == 0) or (a == 0)
+            self.count += (1 if a != b else 0)
             count, self.count = self.count if no_alter else 0, 0 if no_alter else self.count
             return count
 
-        def joiner(k, t, w):
-            k, t = int(k), int(t)
-            return int(int(t != w) * 2 ** w * k)
+        def nobother(cc, cf, cn, ct, ng=False):
+            non = [int(cc), int(cf), int(cn)]
+            do = non.pop(int(ct) % 3) < 1
+            return int(not any(non) if ng else all(non)) if do else 0
 
-        def no_bother(cc, cf, cn, ct):
-            non =  [int(cc), int(cf), int(cn)]
-            do = non.pop(int(ct)%3) < 1
-            return int(all(non)) if do else 0
+        def noner(cc, cf, cn, ct):
+            non = [int(cc), int(cf), int(cn)]
+            do = non.pop(int(ct) % 3) < 1
+            return (non[0] + 2 * non[1]) if do else 0
 
-        def none(cc, cf, cn, ct):
-            non =  [int(cc), int(cf), int(cn)]
-            do = non.pop(int(ct)%3) < 1
-            return (non[0] + 2* non[1]) if do else 0
-
-        def bother(c, f, n, t, e=True):
-            c, f, n, t = int(c), int(f), int(n), int(t) % 3
-            all_k = [c, f, n]
-            if t > 2 or t < 0:
-                raise ValueError(t)
-            target = all_k.pop(t)
+        def bother(cc, cf, cn, ct, e=True):
+            cc, cf, cn, ct = int(cc), int(cf), int(cn), int(ct) % 3
+            all_k = [cc, cf, cn]
+            if ct > 2 or ct < 0:
+                raise ValueError(ct)
+            target = all_k.pop(ct)
             return target * sum(all_k) if e else int(all(all_k))
 
-        point_list = [self.Pnt(text[:-2], *list(text[-2:])) for text in self.df.ponto.to_list()]
+        point_list = [text if type(text) == str else "000" for text in self.df.ponto.to_list()]
+        valor_list = [text if type(text) == str else "0000" for text in self.df.valor.to_list()]
+        point_list = [self.Pnt(text[:-2], *list(text[-2:])) for text in point_list]
         new_list = point_list[1:] + [self.Pnt(0, 0, 0)]
-        val_list0 = [self.Val(*list(text)) for text in self.df.valor.to_list()]
-        non_list = [none(*list(val)) for val in self.df.valor.to_list()]
-        nob_list = [no_bother(*list(val)) for val in self.df.valor.to_list()]
-        val_list = [joiner(val.cc, val.ct, 0) + joiner(val.cf, val.ct, 1) + joiner(val.cn, val.ct, 2)
-                    for val in
-                    val_list0]
+        val_list0 = [self.Val(*list(text)) for text in valor_list]
+        non_list = [noner(*list(val)) for val in valor_list]
+        nob_list = [nobother(*list(val)) for val in valor_list]
+        neg_list = [nobother(*list(val), ng=True) for val in valor_list]
         conservation = [counter(a.ok, b.ok) for a, b in zip(point_list, new_list)]
         perseveration = [counter(a.no, b.no) for a, b in zip(point_list, new_list)]
         deviation = [alter(a, b) for a, b in zip(non_list, non_list[1:] + [0])]
         oposition = [counter(a, b) for a, b in zip(nob_list, nob_list[1:] + [0])]
-        ambiguation = [bother(c, f, n, t) for c, f, n, t in val_list0]
-        transamb = [bother(c, f, n, t, False) for c, f, n, t in val_list0]
-        zipped = list(zip(conservation, perseveration, oposition, deviation, ambiguation, transamb))
-        df__ = DataFrame(zipped, columns='conservation perseveration oposition deviation ambiguation, transamb'.split())
+        negation = [counter(a, b) for a, b in zip(neg_list, neg_list[1:] + [0])]
+        ambiguation = [bother(cc, cf, cn, ct) for cc, cf, cn, ct in val_list0]
+        transamb = [bother(cc, cf, cn, ct, False) for cc, cf, cn, ct in val_list0]
+        zipped = list(zip(conservation, perseveration, oposition, negation, deviation, ambiguation, transamb))
+        columns = 'conservation perseveration oposition negation deviation ambiguation transamb'.split()
+        df__ = DataFrame(zipped, columns=columns)
         _df = self.df.drop(columns='game goal trial carta casa move time ponto valor'.split(),
                            inplace=False).reset_index()
         _df = _df.join(df__).drop(columns='level_0 index _id'.split(), inplace=False)
         # self.df = _df
         return _df
 
-    def plot_template(self, cfg: Cfplot, runner, x_lim=None, y_lim=None, tick=False, tl= False, df=None):
+    def plot_template(self, cfg: Cfplot, runner, x_lim=None, y_lim=None, tick=False, tl=False, df=None):
         """ Template method to embrace a given method.
 
         :param tick: Add slant labels to x-axis.
+        :param tl: Add slant labels with get labels to x-axis.
         :param cfg: Plotting configuration
         :param runner: Given method to be templated.
         :param df: Dataframe source for plotting.
