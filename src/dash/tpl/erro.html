@@ -1,0 +1,28 @@
+{% extends "boiler.html" %}
+{% block main %}
+<!-- start of about -->
+<div class="column is-8">
+    <div class="card">
+        <!-- about header-->
+        <div class="card-content-header has-text-centered">
+            <h4 class="title is-4">ALITE - Erro Inesperado! - {{ about }}</h4>
+        </div>
+        <!-- end of about header -->
+
+        <!-- about content -->
+        <div class="card-image">
+            <figure class="image is-4by3">
+                            <img src="/image/error.jpg" alt="Erro Inesperado! - {{ about }}">
+                <span style="position: absolute;  top: 48px;  left: 32px; font-size: 2rem; color: #435222;">
+                    Oooops, não conseguimos apresentar este serviço.</span>
+                <span style="position: absolute;  top: 96px;  left: 32px; font-size: 4rem; color: #435222;">
+                    Houve um erro Inesperado</span>
+            </figure>
+        </div>
+        <div class="card-content">
+            ....
+        </div>
+    </div>
+</div>
+<!-- end of about column -->
+{% end %}

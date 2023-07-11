@@ -5,7 +5,7 @@
 
 Classes neste módulo:
     - :py:class:`BaseRequestHandler` Funções comuns para os gerentes de Chamada .
-    - :py:class:`DefaultHandler`     Gerencia chamadas defeituosas.
+    - :py:class:    `DefaultHandler` Gerencia chamadas defeituosas.
     - :py:class:`HomeRequestHandler` Chamadas para a página inicial.
     - :py:class:`DashRequestHandler` Menu com os tipos de gráficos oferecidos.
     - :py:class:`PlotRequestHandler` Chamadas para a fachada de serviços.
@@ -17,6 +17,9 @@ Funções neste módulo:
 
 Changelog
 ---------
+
+.. versionadded::    23.07
+    |br| add :class:`MenuEntryHandler` (11)
 
 .. versionadded::    23.06
     |br| add :class:`HomeRequestHandler`,
@@ -43,7 +46,7 @@ from nameko.rpc import RpcProxy
 from typing import Any, Tuple, AnyStr
 from dash import Configuration as Cfg
 from dash import Plotting as Plot
-
+from dash import uimodule
 # tornado.template.execute(about=lambda *_: "")
 version__ = Cfg.version
 
@@ -189,10 +192,31 @@ class PlotRequestHandler(BaseRequestHandler):
         # from dash.service import DashService
         # from nameko.testing.services import worker_factory
         # self.service = worker_factory(DashService)
-        with ClusterRpcProxy(Cfg.config) as cluster_rpc:
-            image = plot_chart(cluster_rpc) if pid in kind else plot_pontos(cluster_rpc)
-        self.set_status(200)
-        self.do_load(Cfg.PLOT_TPL, image=image)
+        try:
+            with ClusterRpcProxy(Cfg.config) as cluster_rpc:
+                image = plot_chart(cluster_rpc) if pid in kind else plot_pontos(cluster_rpc)
+            self.set_status(200)
+            self.do_load(Cfg.PLOT_TPL, image=image)
+        except Exception as ex:
+            self.set_status(500)
+            await self.render("erro.html", titulo=f"Alite - {ex}", version=Cfg.version, about=ex)
+
+
+class MenuEntryHandler(BaseRequestHandler):
+    def get(self, entry_id):
+        entries = dict(home=dict(image="/image/alite_logo.jpg", text="INICIO"),
+                       dash=dict(image="https://i.imgur.com/V7GTxrR.png", text="PLOTS"),
+                       pessoal=dict(image="https://i.imgur.com/zFhiP1o.png", text="PESSOAL"),
+                       geral=dict(image="https://i.imgur.com/zFhiP1o.png", text="GERAL"), )
+        entry = entries.setdefault(entry_id, entries["dash"])
+        if not entry:
+            raise tornado.web.HTTPError(404)
+        self.render("entry.html", entry=entry)
+
+
+settings = {
+    "ui_modules": uimodule,
+}
 
 
 def make_server_app(
@@ -221,6 +245,7 @@ def make_server_app(
         default_handler_class=DefaultHandler,
         debug=True,
         template_path=Cfg.tpl,
+        ** settings
     )
     return service, app
 
