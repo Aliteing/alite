@@ -19,7 +19,7 @@ Changelog
 ---------
 
 .. versionadded::    23.07
-    |br| add :class:`MenuEntryHandler` (11)
+    |br| modification to use UI Modules (12)
 
 .. versionadded::    23.06
     |br| add :class:`HomeRequestHandler`,
@@ -47,8 +47,10 @@ from typing import Any, Tuple, AnyStr
 from dash import Configuration as Cfg
 from dash import Plotting as Plot
 from dash import uimodule
+
 # tornado.template.execute(about=lambda *_: "")
 version__ = Cfg.version
+MAIN = "main dash chart wisc".split()
 
 
 # noinspection PyAttributeOutsideInit
@@ -97,6 +99,16 @@ class BaseRequestHandler(RequestHandler):
         self.finish(template_.load(template).generate(
             version=Cfg.version, about=self.about, help=self.help, **kwargs))
 
+    def do_render(self, template=Cfg.BOIL_TPL, **kwargs: Any) -> None:
+        """
+
+        :param template: O arquivo de gabarito a ser usado.
+        :param kwargs: Os parâmetros usados na geração do gabarito.
+        :return: None
+        """
+        # template_ = tornado.template.Loader(Cfg.tpl)
+        self.render(template, version=Cfg.version, about=self.about, main_menu=MAIN, help=self.help, **kwargs)
+
     def write_error(self, status_code: int, **kwargs: Any) -> None:
         self.set_header(
             'Content-Type', 'application/json; charset=UTF-8'
@@ -114,6 +126,7 @@ class DefaultHandler(RequestHandler):
     """ Captura as rotas defeituosas e apresenta a tela de erro.
 
     """
+
     def prepare(self):
         """ Captura as rotas defeituosas e apresenta a tela de erro.
 
@@ -138,7 +151,8 @@ class HomeRequestHandler(BaseRequestHandler):
         self.check_modal(op)
         """ Verifica se a operação pedida é transição do painel modal. """
         self.set_status(200)
-        self.do_load()
+        # self.do_load(main_menu="main dash chart".split())
+        self.do_render()
 
 
 class DashRequestHandler(BaseRequestHandler):
@@ -166,7 +180,8 @@ class DashRequestHandler(BaseRequestHandler):
             for _, line_menu in enumerate([kind[:3], kind[3:]])
         ]
         self.set_status(200)
-        self.do_load(Cfg.DASH_TPL, chart_menu=chart_menu)
+        # self.do_load(Cfg.DASH_TPL, chart_menu=chart_menu)
+        self.do_render(template=Cfg.DASH_TPL, chart_menu=chart_menu)
 
 
 class PlotRequestHandler(BaseRequestHandler):
@@ -181,11 +196,13 @@ class PlotRequestHandler(BaseRequestHandler):
         :param pid: Tipo do gráfico pedido a ser enviado para o dash
         :return: (os dados da imagem codificados em base64)
         """
+
         def plot_pontos(cluster):
             return cluster.datascience_dash_service.plot_pontos()
 
         def plot_chart(cluster):
             return cluster.datascience_dash_service.plot_chart(pid)
+
         self.check_modal(op)
         kind = Plot.kind
         from nameko.standalone.rpc import ClusterRpcProxy
@@ -196,27 +213,11 @@ class PlotRequestHandler(BaseRequestHandler):
             with ClusterRpcProxy(Cfg.config) as cluster_rpc:
                 image = plot_chart(cluster_rpc) if pid in kind else plot_pontos(cluster_rpc)
             self.set_status(200)
-            self.do_load(Cfg.PLOT_TPL, image=image)
+            # self.do_load(Cfg.PLOT_TPL, image=image)
+            self.do_render(template=Cfg.PLOT_TPL, image=image)
         except Exception as ex:
             self.set_status(500)
             await self.render("erro.html", titulo=f"Alite - {ex}", version=Cfg.version, about=ex)
-
-
-class MenuEntryHandler(BaseRequestHandler):
-    def get(self, entry_id):
-        entries = dict(home=dict(image="/image/alite_logo.jpg", text="INICIO"),
-                       dash=dict(image="https://i.imgur.com/V7GTxrR.png", text="PLOTS"),
-                       pessoal=dict(image="https://i.imgur.com/zFhiP1o.png", text="PESSOAL"),
-                       geral=dict(image="https://i.imgur.com/zFhiP1o.png", text="GERAL"), )
-        entry = entries.setdefault(entry_id, entries["dash"])
-        if not entry:
-            raise tornado.web.HTTPError(404)
-        self.render("entry.html", entry=entry)
-
-
-settings = {
-    "ui_modules": uimodule,
-}
 
 
 def make_server_app(
@@ -245,7 +246,7 @@ def make_server_app(
         default_handler_class=DefaultHandler,
         debug=True,
         template_path=Cfg.tpl,
-        ** settings
+        ui_modules=uimodule
     )
     return service, app
 
@@ -274,7 +275,7 @@ def main(args=Cfg):
     :return: None (apenas inicia o servidor)
     """
     addr_service, dash_app = make_server_app(config=args.dash_srv, debug=args.debug)
-    run_server(app=dash_app, port=args.port,)
+    run_server(app=dash_app, port=args.port, )
 
 
 if __name__ == '__main__':

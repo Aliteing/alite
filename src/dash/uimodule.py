@@ -23,6 +23,7 @@ Changelog
 """
 from tornado.web import UIModule
 from dash import Configuration as Cfg
+
 version__ = Cfg.version
 
 
@@ -31,14 +32,19 @@ class MenuEntry(UIModule):
     """ Classe antecessora dos requests.
     """
 
-    def render(self, entry, show_comments=False):
+    def render(self, entry):
         """ Inicializa os requests.
 
         Declara um conjunto de parâmetros iniciais da chamada base.
 
         :param     entry: O menu requisitado.
-        :param      show_comments: Configuração para os chamados.
         """
-        return self.render_string(
-            "module-entry.html", entry=entry, show_comments=show_comments)
+        e_dict = dict(
+            main=dict(ref="/", img="/image/alite_logo.jpg", alt="INICIO"),
+            dash=dict(ref="/dash", img="https://i.imgur.com/V7GTxrR.png", alt="PLOTS"),
+            chart=dict(ref="/chart", img="https://i.imgur.com/zFhiP1o.png", alt="GERAL"),
+            wisc=dict(ref="/wisc", img="https://i.imgur.com/zFhiP1o.png", alt="WISC")
 
+        )
+        return self.render_string(
+            "menu_entry.html", **e_dict[entry])
