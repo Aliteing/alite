@@ -1,0 +1,37 @@
+<!--
+    This file is part of  program Alite
+    Copyright © 2023  Carlo Oliveira carlo@nce.ufrj.br,
+    `Labase http://labase.selfip.org/`_ - `NCE http://portal.nce.ufrj.br`_ - `UFRJ https://ufrj.br/`_.
+    SPDX-License-Identifier: `GNU General Public License v3.0 or later http://is.gd/3Udt`_.
+-->
+{% extends "boiler.html" %}
+{% block main %}
+        {% for a_chart, a_top, a_left, a_name, a_leg in line_menu %}
+            <!-- start of post -->
+            <div class="column is-2">
+                <div class="card">
+                    <!-- image for post -->
+                    <div class="card is-2by2" style="height:140px; overflow:hidden;">
+                        <figure>
+                            <a href="/wisc/{{ a_chart }}">
+                                <img src="/image/poetess.jpg" alt="Image"
+                                     style="position:relative; min-width:1200px;
+                                                  top:{{ a_top }}px; left:{{ a_left }}px;" width="100px"
+                                >
+                            </a>
+                        </figure>
+                    </div>
+                    <!-- end of image for post -->
+
+                    <!-- post header -->
+                    <div class="card-content-header">
+                        <!--h6 class="title is-6"><a href="//supygirls/moduler/ada">Ada</a></h6-->
+                        <h5 class="title is-6"><a href="/wisc/{{ a_chart }}">{{ a_name }}</a></h5>
+                    </div>
+                    {{ a_leg }}
+                </div>
+            </div>
+            <!-- end of post -->
+        {% end %}
+{% end %}
+

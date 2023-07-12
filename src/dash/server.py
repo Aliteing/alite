@@ -4,7 +4,8 @@
 
 
 Classes neste módulo:
-    - :py:class:`BaseRequestHandler` Funções comuns para os gerentes de Chamada .
+    - :py:class:`GameRequestHandler` Mostra indivíduos e plota gráficos individuais.
+    - :py:class:`BaseRequestHandler` Funções comuns para os gerentes de Chamada.
     - :py:class:    `DefaultHandler` Gerencia chamadas defeituosas.
     - :py:class:`HomeRequestHandler` Chamadas para a página inicial.
     - :py:class:`DashRequestHandler` Menu com os tipos de gráficos oferecidos.
@@ -19,10 +20,11 @@ Changelog
 ---------
 
 .. versionadded::    23.07
+    |br| add :class:`GameRequestHandler` to deal with individual plots (12a)
     |br| modification to use UI Modules (12)
 
 .. versionadded::    23.06
-    |br| add :class:`HomeRequestHandler`,
+    |br| add :class:`HomeRequestHandler`
     |br| :meth:`BaseRequestHandler.check_modal`, boiler and about (10)
     |br| :meth:`BaseRequestHandler.check_modal`, boiler and about (10)
     |br| :class:`PlotRequestHandler`, plot & dash, menu boiler review (23)
@@ -134,7 +136,9 @@ class DefaultHandler(RequestHandler):
         """
         # Use prepare() to handle all the HTTP methods
         self.set_status(404)
-        self.render(Cfg.ERR_TPL, titulo="Alite - Erro 404", version=Cfg.version, about="")
+        self.render(Cfg.ERR_TPL, titulo="Alite - Erro 404", version=Cfg.version, about="", main_menu=MAIN, help="")
+
+        # self.do_render(Cfg.ERR_TPL, titulo="Alite - Erro 404", version=Cfg.version, about="")
 
 
 class HomeRequestHandler(BaseRequestHandler):
@@ -184,6 +188,46 @@ class DashRequestHandler(BaseRequestHandler):
         self.do_render(template=Cfg.DASH_TPL, chart_menu=chart_menu)
 
 
+class GameRequestHandler(BaseRequestHandler):
+    """ Mostra indivíduos e plota gráficos individuais.
+
+    """
+    def show_items(self):
+        """ Listas os alunos no banco para requisitar plots.
+
+        :return: (Um gabarito do painel com a lista de indivíduos a serem plotados)
+        """
+        alunos = [[(f"id00{ac}000{al}", f"aluno{al}_{ac}", f"Nome{ac} Sobrenome{al}") for ac in range(6)]
+                  for al in range(3)]
+        chart_menu = [
+            (a_chart, iy * -200, ix * -200, a_name, a_leg)
+            for iy, line_menu in enumerate(alunos)
+            for ix, (a_chart, a_name, a_leg) in enumerate(line_menu)
+        ]
+        self.set_status(200)
+        # self.do_load(Cfg.DASH_TPL, chart_menu=chart_menu)
+        self.do_render(template="dasher.html", line_menu=chart_menu)
+
+    def plot_item(self, item):
+        """ Plota o gráfico para o indivíduo requisitado.
+
+        :param item: Id do indivíduo com gráfico pedido a ser enviado para o dash
+        :return: (Um plot do gráfico requisitado para o indivíduo)
+        """
+        self.set_status(200)
+        self.do_render(template="dasher.html", line_menu=[(item, 0, 0, item, item)])
+
+    async def get(self, op=None, pid=None):
+        """ Listas os alunos no banco para requisitar plots.
+
+        :param op: Câmbio do estado do modal entre ativo e inativo
+        :param pid: Id do indivíduo com gráfico pedido a ser enviado para o dash
+        :return: (Um gabarito do painel com a lista de dados descritivos)
+        """
+        self.check_modal(op)
+        self.plot_item(pid) if pid else self.show_items()
+
+
 class PlotRequestHandler(BaseRequestHandler):
     """ Manuseia requisições para o rpc dash_service
 
@@ -217,7 +261,7 @@ class PlotRequestHandler(BaseRequestHandler):
             self.do_render(template=Cfg.PLOT_TPL, image=image)
         except Exception as ex:
             self.set_status(500)
-            await self.render("erro.html", titulo=f"Alite - {ex}", version=Cfg.version, about=ex)
+            self.do_render("erro.html", titulo=f"Alite - {ex}", version=Cfg.version, about=ex)
 
 
 def make_server_app(
@@ -234,6 +278,8 @@ def make_server_app(
     # get_games = r'/chart/(?P<id>[a-zA-Z0-9-]+)/?'
     app = Application(
         [
+            (r'/wisc', GameRequestHandler, dict(service=service, config=config)),
+            (r'/wisc/(?P<pid>[a-zA-Z0-9-]+)/?', GameRequestHandler, dict(service=service, config=config)),
             (Cfg.GET_DASH, DashRequestHandler, dict(service=service, config=config)),
             (Cfg.GET_POINT, PlotRequestHandler, dict(service=service, config=config)),
             (Cfg.GET_GAMES, PlotRequestHandler, dict(service=service, config=config)),
