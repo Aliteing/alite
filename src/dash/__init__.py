@@ -41,6 +41,7 @@ class MongoConfiguration:
     data_base = "alite_game",
     collection = "score",
     db_url = ev["dbcon"]
+    cdb_url = ev["CDB_CON"]
     atlas_url = ev["atlas"]
     username = "carlotolla9"
     con_string = f"mongodb+srv://{username}:{passwd}@{db_url}/?retryWrites=true&w=majority"
