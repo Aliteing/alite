@@ -1,8 +1,8 @@
 #Grab the latest alpine image
 # Added Labels, change -m to main, expose 8084
-FROM python:3.12.0a5-alpine3.17
+FROM python:3.10.13-alpine3.19
 LABEL labase.author="carlo@ufrj.br"
-LABEL version="23.05"
+LABEL version="23.12"
 LABEL description="Alite education platform configured for games"
 # Install python and pip
 # RUN apk add --no-cache --update python3 py-pip bash
@@ -22,7 +22,7 @@ ADD . /var/www/alite
 WORKDIR /var/www/alite/src/server
 
 # Expose is NOT supported by Heroku
-EXPOSE 8084
+EXPOSE 8082
 
 # Run the image as a non-root user
 RUN adduser -D myuser
