@@ -35,7 +35,7 @@ import pathlib
 
 from game_main import start_server as game_server
 from tornado_main import start_server as kanban_server
-from tornado.options import define, options
+from tornado.options import define, options, parse_command_line
 
 ServerKind = namedtuple("ServerKind", "game kanban")(0, 1)
 
@@ -78,7 +78,7 @@ class GameDockerNoPasswordConfiguration:
 
 @dataclass
 class Configuration:
-    version = "23.05"
+    version = "23.12"
     port = "8082"
     game = ServerKind.game
     kanban = ServerKind.kanban
@@ -112,4 +112,5 @@ class Main:
 
 if __name__ == '__main__':
     # Configuration.db._con_string = options.dbcon
+    # parse_command_line()
     Main(Configuration.game).init().start()

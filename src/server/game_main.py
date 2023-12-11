@@ -212,8 +212,12 @@ def make_app(ds=None):
 
 
 def start_server():
-    from tornado.options import options
+    from tornado.options import options, parse_command_line, define
     from model.game_facade import Facade
+    #define("dbcon", default="mongodb:27017", help="Main user DB")
+    #define("port", default="8080", help="listen to port")
+    #parse_command_line()
+    print(f"Connect db on port {options.dbcon}")
     app = make_app(Facade())
     app.listen(options.port)
     print(f"game listening on port {options.port}")
