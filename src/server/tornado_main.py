@@ -36,7 +36,7 @@ import os
 from tornado.web import Application, RequestHandler, StaticFileHandler
 from tornado.ioloop import IOLoop
 import json
-from atlas_model import DS
+# from atlas_model import DS
 
 # kanban = {"": ""}
 
