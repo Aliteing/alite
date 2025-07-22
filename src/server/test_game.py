@@ -47,9 +47,15 @@ Changelog
         add score and add game passing (27).
 
 """
+import sys
+from pathlib import Path
+here = Path(__file__).parent.parent.parent
+sys.path.append(str(here)+"/server")
+print(str(Path("../../"+__file__)))
+print(str(here)+"/server", sys.path)
 import json
 import unittest
-import mongomock
+from redismock import mockmanager
 from tornado.testing import AsyncHTTPTestCase
 from unittest.mock import MagicMock, patch
 import game_main as game
@@ -98,7 +104,7 @@ MONGO_JSON = '[{"_id":{"$oid":"64765566bcea5d86f4f25e01"},"name":"aluno","ano":"
 class TestSomeHandler(AsyncHTTPTestCase):
     @patch('model.game_facade.options', MagicMock(name="options"))
     def get_app(self):
-        collection = mongomock.MongoClient().db.create_collection('score')
+        collection = mockmanager.mock_redis_client()
         self.db = Facade(db=collection)
         return game.make_app(ds=self.db)
 
@@ -204,7 +210,7 @@ class TestSomeHandler(AsyncHTTPTestCase):
 class TestGameFacade(unittest.TestCase):
     @patch('model.game_facade.options', MagicMock(name="options"))
     def _init_mongo(self, objects=None):
-        collection = mongomock.MongoClient().db.create_collection('score')
+        collection = mockmanager.mock_redis_client()
         objects = objects or MONGO
         collection.insert_many(objects)
         self.person = person = [it['_id'] for it in collection.find({'name': {'$exists': True}})]
@@ -216,7 +222,7 @@ class TestGameFacade(unittest.TestCase):
         self.facade = Facade(db=collection)
 
     def test_list_mongo(self):
-        dbs = mongomock.MongoClient(host="0.0.0.0", username="username", password="passwd").list_database_names()
+        dbs = mockmanager.mock_redis_client().list_database_names()
         print("dbs", dbs)
         self.assertEqual(dbs, [])  # add assertion here
 
@@ -333,16 +339,16 @@ class TestGameFacade(unittest.TestCase):
     @patch('model.game_facade.options', MagicMock(name="options"))
     def _load_base(self):
         def oid_decoder(obj):
-            from bson import ObjectId
-            if '$oid' in obj:
-                obj = ObjectId(obj['$oid'])
-                return obj
+            # from bson import ObjectId
+            # if '$oid' in obj:
+            #     obj = ObjectId(obj['$oid'])
+            #     return obj
             return obj
 
         _obj = json.loads(MONGO_JSON, object_hook=oid_decoder)
         # print("mongo json", _obj)
         self.assertIn("_id", _obj[0])
-        collection = mongomock.MongoClient().db.create_collection('score')
+        collection = mockmanager.mock_redis_client()
         collection.insert_many(_obj)
         self.facade = Facade(db=collection)
 

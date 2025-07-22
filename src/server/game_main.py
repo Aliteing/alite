@@ -44,19 +44,19 @@ Changelog
 import os
 from typing import Optional, Awaitable
 
-from bson.objectid import ObjectId
+# from bson.objectid import ObjectId
 from tornado.web import Application, RequestHandler, StaticFileHandler
 from tornado.ioloop import IOLoop
 import json
-
-import model.game_facade
+import modelo
+# from model import game_facade as game_facade
 
 
 # from model import DS
 
 
 class LitHandler(RequestHandler):
-    ds: model.game_facade.Facade
+    ds: modelo.game_facade.Facade
     """Just implements abstract data_received"""
 
     def data_received(self, chunk: bytes) -> Optional[Awaitable[None]]:
@@ -74,8 +74,8 @@ class DefaultHandler(RequestHandler):
 
 class JSONSerializer(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, ObjectId):
-            return obj.__repr__()
+        # if isinstance(obj, ObjectId):
+        #     return obj.__repr__()
 
         return json.JSONEncoder.default(self, obj)
 
@@ -213,7 +213,7 @@ def make_app(ds=None):
 
 def start_server():
     from tornado.options import options
-    from model.game_facade import Facade
+    from modelo.game_facade import Facade
     app = make_app(Facade())
     app.listen(options.port)
     print(f"game listening on port {options.port}")
