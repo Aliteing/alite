@@ -44,15 +44,15 @@ Changelog
         score items operation working (27).
 
 """
-import pymongo
+import redis
 import uuid
-from bson.objectid import ObjectId
+# from bson.objectid import ObjectId
 from tornado.options import options
 
 
 def init(data_base="alite_game", collection="score", con_string=None):
     con_string = con_string or options.dbcon
-    client = pymongo.MongoClient(con_string)
+    client = redis.StrictRedis(host='localhost', port=6379, db=0)
     mydb = client[data_base]
 
     my_col = mydb[collection]
@@ -74,14 +74,15 @@ class Facade:
         return [ob for ob in dbt]
 
     def load_player(self, oid):
-        oid = oid if oid is ObjectId else ObjectId(oid)
+        oid = oid  # if oid is ObjectId else ObjectId(oid)
         dbt = self.db.find_one(filter={"_id": oid})  # or self.db.find_one()
         # print("load_player dbt", oid, dbt)
         return dbt or dict(_id=f"THIS ID: {oid} WAS NOT FOUND")
 
     def load_item(self, item_dict):
         if item_dict and "_id" in item_dict:
-            item_dict["_id"] = id_ if (id_ := item_dict["_id"]) is ObjectId else ObjectId(id_)
+            item_dict["_id"] = item_dict["_id"]
+            # item_dict["_id"] = id_ if (id_ := item_dict["_id"]) is ObjectId else ObjectId(id_)
         dbt = self.db.find_one(filter=item_dict) if item_dict else self.db.find_one()
         return dbt
 
@@ -96,7 +97,7 @@ class Facade:
         return ids
 
     def expand_item(self, oid):
-        oid = oid if oid is ObjectId else ObjectId(oid)
+        oid = oid  # if oid is ObjectId else ObjectId(oid)
         aggregate1 = [
             {
                 '$match': {
@@ -144,7 +145,7 @@ class Facade:
 
     def __find_trial(self, person, game, goal=0, trial=0):
         _ = goal, trial
-        oid = person if person is ObjectId else ObjectId(person)
+        oid = person  # if person is ObjectId else ObjectId(person)
         scorer = self.insert(dict(score=()))
         item_dict = dict(_id=oid)
         trials = self.db.find_one(filter=item_dict)
@@ -153,7 +154,7 @@ class Facade:
         return oid, scorer, len(trials)
 
     def score(self, items, score_id=None):
-        score_id = score_id if score_id is ObjectId else ObjectId(score_id)
+        score_id = score_id  # if score_id is ObjectId else ObjectId(score_id)
         self.db.update_one({'_id': score_id}, {'$push': {'score': items}}, upsert=True)
         return score_id
 
