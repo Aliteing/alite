@@ -36,7 +36,7 @@ from typing import Optional
 
 
 @dataclass
-class MongoDataclass:
+class Dataclass:
     doc_id: str
     _id: Optional[int] = None
 
@@ -50,7 +50,7 @@ class MongoDataclass:
 
 
 @dataclass
-class Score(MongoDataclass):
+class Score(Dataclass):
     trial_id: int = 0
     marker: str = 0
     slot: str = ""
@@ -63,27 +63,27 @@ class Score(MongoDataclass):
 
 
 @dataclass
-class Trial(MongoDataclass):
+class Trial(Dataclass):
     game_id = str = ""
     score: list[Score] = ()
 
 
 @dataclass
-class Goal(MongoDataclass):
+class Goal(Dataclass):
     name: str = ""
     game_id = str = ""
     trial: list[Trial] = ()
 
 
 @dataclass
-class Game(MongoDataclass):
+class Game(Dataclass):
     game: str = ""
     player_id = str = ""
-    goal: list[list[str]] = ()
+    goal: list[Goal] = ()
 
 
 @dataclass
-class Player(MongoDataclass):
+class Player(Dataclass):
     name: str = ""
     school: str = ""
     year: int = 0
@@ -93,3 +93,9 @@ class Player(MongoDataclass):
     begin: datetime = ""
     end: datetime = ""
     games: list[Game] = ()
+
+@dataclass
+class Group(Dataclass):
+    game: str = ""
+    player_id = str = ""
+    goal: list[Game] = ()
