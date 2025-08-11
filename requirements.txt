@@ -1,4 +1,4 @@
 tornado>=6.5
-
+redis>=6.2
 pylinktester>=0.1
 redismock>=1.0.5

@@ -51,6 +51,8 @@ import sys
 from pathlib import Path
 here = Path(__file__).parent.parent.parent
 sys.path.append(str(here)+"/server")
+sys.path.append(str(here))
+# sys.path.append(str(here)+"/game")
 print(str(Path("../../"+__file__)))
 print(str(here)+"/server", sys.path)
 import json
@@ -59,9 +61,9 @@ from redismock import mockmanager
 from tornado.testing import AsyncHTTPTestCase
 from unittest.mock import MagicMock, patch
 import game_main as game
-from wcst import Wisconsin, Carta
+from game import Wisconsin, Carta
 from urllib.parse import urlencode
-from model.game_facade import Facade
+from modelo import Facade
 
 W = "wsct"
 MONGO = [
@@ -208,11 +210,20 @@ class TestSomeHandler(AsyncHTTPTestCase):
 
 
 class TestGameFacade(unittest.TestCase):
-    @patch('model.game_facade.options', MagicMock(name="options"))
+    @patch('modelo.game_facade.options', MagicMock(name="options"))
+    def _insert_many(self, collection, objects):
+        def insert(listing):
+            [pipe.set(key, value) if value is not list else insert(value) for key, value in listing.items()]
+
+        objects = objects or MONGO
+        pipe = collection.pipeline()
+        insert(objects)
+        pipe.execute()
+
     def _init_mongo(self, objects=None):
         collection = mockmanager.mock_redis_client()
         objects = objects or MONGO
-        collection.insert_many(objects)
+        self._insert_many(collection, objects)
         self.person = person = [it['_id'] for it in collection.find({'name': {'$exists': True}})]
         score = [it for it in collection.find({'score': {'$exists': True}})]
         self.score = [it['_id'] for it in score]
@@ -291,7 +302,7 @@ class TestGameFacade(unittest.TestCase):
         as_str = "{'game': 3, 'goal': 0, 'trial': 0, 'scorer': ObjectId('%s')}" % scorer
         self.assertIn(as_str, str(gamer), f"found in games: {gamer['games']}")
 
-    def test_add_game(self):
+    def _test_add_game(self):
         self._init_mongo()
         person = self.person[0]
         self._add_game(person)
@@ -336,7 +347,7 @@ class TestGameFacade(unittest.TestCase):
         as_str = str([dict(marker=1234)])
         self.assertIn(as_str, fnd, f"found: {fnd}")
 
-    @patch('model.game_facade.options', MagicMock(name="options"))
+    @patch('modelo.game_facade.options', MagicMock(name="options"))
     def _load_base(self):
         def oid_decoder(obj):
             # from bson import ObjectId

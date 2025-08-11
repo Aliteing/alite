@@ -30,8 +30,8 @@ Changelog
 """
 from datetime import datetime
 
-from braser import Braser
-from browser import doc
+# from braser import Braser
+from browser import document as doc
 
 
 class Vitollino:
